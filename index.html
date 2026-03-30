@@ -1495,30 +1495,24 @@ function renderPriceHistory(){
 }
 
 function clearHistory() {
-  if (confirm("Are you sure you want to delete all shopping history? This cannot be undone.")) {
-    state.history = []; // Clear the history array in the state object
-    saveState();        // Persist the empty array to localStorage
-    renderSummary();    // Refresh the Summary tab to show an empty state
-    
-    // Optional: show a confirmation alert if you have an alert system
-    console.log("History cleared successfully.");
-  }
-}
-function clearHistory() {
-  if (confirm("Are you sure you want to delete all shopping and price history? This cannot be undone.")) {
-    // 1. Clear the general shopping trips
+  const confirmed = confirm("Are you sure you want to delete all shopping and price history? This cannot be undone.");
+  
+  if (confirmed) {
+    // 1. Clear the trip summaries (the list in the Summary tab)
     state.history = []; 
     
-    // 2. Clear the specific item price tracking
+    // 2. Clear the specific item price records (the data for price chips)
     state.priceHistory = {}; 
     
-    // 3. Save the now-empty state to localStorage
+    // 3. Save the empty state to localStorage
     saveState(); 
     
-    // 4. Refresh the UI components that use this data
-    renderSummary(); 
+    // 4. Refresh the UI components
+    renderSummary();     // Clears the history list
+    renderInventory();   // Removes price chips from the Inventory tab
+    renderPantry();      // Removes price chips from the Pantry tab
     
-    alert("All history has been cleared.");
+    alert("All history has been successfully cleared.");
   }
 }
 
