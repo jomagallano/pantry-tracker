@@ -1504,13 +1504,21 @@ function clearHistory() {
     console.log("History cleared successfully.");
   }
 }
-function clearAllHistory() {
-  if (confirm("Clear all trip and price history?")) {
-    state.history = [];
-    state.priceHistory = {}; // Resets the item-specific price tracking
-    saveState();
-    renderSummary();
-    renderPriceHistory(); // If you have a separate price history render function
+function clearHistory() {
+  if (confirm("Are you sure you want to delete all shopping and price history? This cannot be undone.")) {
+    // 1. Clear the general shopping trips
+    state.history = []; 
+    
+    // 2. Clear the specific item price tracking
+    state.priceHistory = {}; 
+    
+    // 3. Save the now-empty state to localStorage
+    saveState(); 
+    
+    // 4. Refresh the UI components that use this data
+    renderSummary(); 
+    
+    alert("All history has been cleared.");
   }
 }
 
