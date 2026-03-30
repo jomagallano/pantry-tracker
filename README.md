@@ -6,7 +6,7 @@ A personal pantry and shopping management tool built as a single HTML file. No l
 
 ## What It Does
 
-PantryTrack helps you keep track of everything in your pantry, know what to buy, and never double-purchase something you already have. It cross-checks recipe ingredients against your current stock and tells you exactly what's missing.
+PantryTracker helps you keep track of everything in your pantry, know what to buy, and never double-purchase something you already have. It cross-checks recipe ingredients against your current stock and tells you exactly what's missing.
 
 ---
 
@@ -90,7 +90,7 @@ A full in/out log of your pantry activity.
 
 ## Backup & Restore
 
-PantryTrack stores all data in your browser's `localStorage`. This means data is tied to the browser you use — clearing browser data or accidentally refreshing won't delete it on its own, but switching browsers or devices will show an empty pantry.
+PantryTracker stores all data in your browser's `localStorage`. This means data is tied to the browser you use — clearing browser data or accidentally refreshing won't delete it on its own, but switching browsers or devices will show an empty pantry.
 
 **Best practice:** Export a JSON backup after every shopping trip.
 
@@ -134,11 +134,11 @@ You can edit, delete, or add to these freely from the Pantry tab.
 The app is a single `.html` file with no dependencies or build step.
 
 **To deploy on Vercel:**
-1. Create a new project and upload `pantrytrack.html` as your only file
+1. Create a new project and upload `pantrytracker.html` as your only file
 2. Rename it to `index.html` or set it as the entry point
 3. Deploy — it works immediately
 
-**To use locally:** Just open `pantrytrack.html` in any browser on your phone or desktop.
+**To use locally:** Just open `pantrytracker.html` in any browser on your phone or desktop.
 
 ---
 
