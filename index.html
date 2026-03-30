@@ -223,6 +223,14 @@
   .pantry-grid.expanded .pc-main { flex: 1; }
   .pantry-grid.expanded .pc-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
 
+  /* PANTRY ENTRY ROWS (expanded multi-brand) */
+  .pantry-entry-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--cream-warm); }
+  .pantry-entry-row:last-of-type { border-bottom: none; }
+  .per-main { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; flex: 1; }
+  .per-brand { font-size: 12px; font-weight: 600; color: var(--text-dark); }
+  .per-meta { font-size: 11px; color: var(--text-soft); }
+  .per-right { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
+
   /* CUSTOM SECTIONS */
   .custom-section { background: var(--white); border-radius: 14px; border: 1.5px solid var(--brown-light); margin-bottom: 12px; overflow: hidden; box-shadow: var(--shadow); }
   .custom-section-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 10px; background: linear-gradient(135deg, #fdf8f0 0%, #f5edd8 100%); border-bottom: 1px solid var(--cream-warm); }
@@ -643,7 +651,7 @@ const DEFAULT_HH = [
 ];
 
 // ==================== STATE ====================
-let state = {shopItems:[], householdItems:[], pantryItems:[], tripHistory:[], masterShop:null, masterHH:null, customSections:[], pantryMaster:null, prefs:{expiryWarnDays:7, defaultLowStock:1}};
+let state = {shopItems:[], householdItems:[], pantryItems:[], pantryEntries:[], tripHistory:[], masterShop:null, masterHH:null, customSections:[], pantryMaster:null, prefs:{expiryWarnDays:7, defaultLowStock:1}};
 let editShopId=null, editHHId=null, editPantryId=null;
 
 function deepCopy(o){ return JSON.parse(JSON.stringify(o)); }
@@ -659,12 +667,33 @@ function loadState(){
       if(!state.masterShop) state.masterShop = deepCopy(state.shopItems.filter(i=>!i.autoAdded));
       if(!state.masterHH)   state.masterHH   = deepCopy(state.householdItems);
       if(!state.customSections) state.customSections = [];
+      if(!state.pantryEntries) state.pantryEntries = [];
+      // MIGRATION: convert old flat pantryItems into new pantryEntries
+      if(state.pantryItems && state.pantryItems.length && state.pantryEntries.length===0){
+        state.pantryEntries = state.pantryItems.map(item=>({
+          id: 'pe_'+item.id,
+          expectedId: item.expectedId||null,
+          name: item.name,
+          brand: item.brand||'',
+          size: item.size||'',
+          cat: item.cat||'Other',
+          qty: item.qty||1,
+          lowThreshold: item.lowThreshold||1,
+          dateBought: item.dateBought||'',
+          expiry: item.expiry||'',
+          store: item.store||'',
+          pricePaid: item.pricePaid||0,
+        }));
+        state.pantryItems = []; // clear old flat items
+        saveState();
+      }
     } else {
       state.shopItems      = deepCopy(DEFAULT_SHOP);
       state.householdItems = deepCopy(DEFAULT_HH);
       state.masterShop     = deepCopy(DEFAULT_SHOP);
       state.masterHH       = deepCopy(DEFAULT_HH);
       state.pantryItems    = [];
+      state.pantryEntries  = [];
       state.tripHistory    = [];
       saveState();
     }
@@ -689,17 +718,39 @@ function autoAddFromPantry(){
   state.shopItems = state.shopItems.filter(i=>!i.autoAdded);
   const expiring=[], low=[];
   const warnDays = (state.prefs&&state.prefs.expiryWarnDays)||7;
-  state.pantryItems.forEach(item=>{
-    const days = daysToExpiry(item.expiry);
-    const isLow = typeof item.qty==='number' && item.qty<=(item.lowThreshold||1);
-    if(days!==null && days>=0 && days<=warnDays){
-      expiring.push({name:item.name, days});
-      state.shopItems.push({id:'ax_'+item.id, name:item.name+' (expiring)', cat:item.cat||'Other', price:0, qty:1, brand:item.brand||'', note:'Expires '+item.expiry, checked:false, lowFlag:false, autoAdded:true});
-    } else if(isLow){
-      low.push({name:item.name, qty:item.qty});
-      state.shopItems.push({id:'al_'+item.id, name:item.name+' (low stock)', cat:item.cat||'Other', price:0, qty:1, brand:item.brand||'', note:'Only '+item.qty+' left', checked:false, lowFlag:false, autoAdded:true});
+
+  // Group entries by expectedId (slot)
+  const slotMap = {};
+  (state.pantryEntries||[]).forEach(entry=>{
+    const key = entry.expectedId||entry.id;
+    if(!slotMap[key]) slotMap[key]={name:entry.name, cat:entry.cat, totalQty:0, lowThreshold:entry.lowThreshold||1, entries:[]};
+    slotMap[key].entries.push(entry);
+    slotMap[key].totalQty += (entry.qty||0);
+    slotMap[key].lowThreshold = entry.lowThreshold||1;
+  });
+
+  Object.values(slotMap).forEach(slot=>{
+    // Check expiring entries
+    slot.entries.forEach(entry=>{
+      const days = daysToExpiry(entry.expiry);
+      if(days!==null && days>=0 && days<=warnDays){
+        expiring.push({name:slot.name+(entry.brand?' ('+entry.brand+')':''), days});
+        const alreadyAdded = state.shopItems.find(i=>i.autoSrcId==='exp_'+entry.id);
+        if(!alreadyAdded){
+          state.shopItems.push({id:'ax_'+entry.id, name:slot.name+' (expiring)', cat:slot.cat||'Other', price:0, qty:1, brand:entry.brand||'', note:'Expires '+entry.expiry, checked:false, lowFlag:false, autoAdded:true, autoSrcId:'exp_'+entry.id});
+        }
+      }
+    });
+    // Check low total qty
+    if(slot.totalQty <= slot.lowThreshold){
+      low.push({name:slot.name, qty:slot.totalQty});
+      const alreadyAdded = state.shopItems.find(i=>i.autoSrcId==='low_'+slot.entries[0]?.expectedId);
+      if(!alreadyAdded){
+        state.shopItems.push({id:'al_'+Date.now(), name:slot.name+' (low stock)', cat:slot.cat||'Other', price:0, qty:1, brand:'', note:'Only '+slot.totalQty+' left total', checked:false, lowFlag:false, autoAdded:true, autoSrcId:'low_'+(slot.entries[0]?.expectedId||slot.entries[0]?.id)});
+      }
     }
   });
+
   const ea=document.getElementById('expiryAlert'), la=document.getElementById('lowAlert');
   if(expiring.length){ ea.classList.add('show'); document.getElementById('expiryAlertItems').innerHTML=expiring.map(i=>`${i.name} — ${i.days===0?'TODAY':i.days+'d left'}`).join('<br>'); }
   if(low.length){ la.classList.add('show'); document.getElementById('lowAlertItems').innerHTML=low.map(i=>`${i.name} — ${i.qty} remaining`).join('<br>'); }
@@ -975,8 +1026,120 @@ function renderPantry(){
   }).join('');
 }
 
+function getEntriesForSlot(expectedId){
+  return (state.pantryEntries||[]).filter(e=>e.expectedId===expectedId);
+}
+
+// kept for backward compat — returns first entry for a slot
 function getPantryItem(expectedId){
-  return state.pantryItems.find(i=>i.expectedId===expectedId);
+  return (state.pantryEntries||[]).find(e=>e.expectedId===expectedId);
+}
+
+function renderPantry(){
+  initPantryMaster();
+  const overviewBar = document.getElementById('pantryOverviewBar');
+  const mapContainer = document.getElementById('pantryMap');
+  const cats = Object.keys(state.pantryMaster);
+
+  // Build overview bar
+  overviewBar.innerHTML = cats.map(cat=>{
+    const expected = state.pantryMaster[cat].length;
+    const stocked  = state.pantryMaster[cat].filter(ei=>getEntriesForSlot(ei.id).length>0).length;
+    const pct = expected ? stocked/expected : 0;
+    const cls = pct===1 ? 'full' : pct < 0.4 ? 'empty' : 'low';
+    return `<div class="pantry-score-chip ${cls}" onclick="scrollToCat('${cat}')">
+      <span class="psc-fraction">${stocked}/${expected}</span>
+      <div class="psc-label">${PANTRY_CAT_ICONS[cat]||'📦'} ${cat.split(' ')[0]}</div>
+    </div>`;
+  }).join('');
+
+  mapContainer.innerHTML = cats.map(cat=>{
+    const expectedItems = state.pantryMaster[cat];
+    const stocked  = expectedItems.filter(ei=>getEntriesForSlot(ei.id).length>0).length;
+    const pct = expectedItems.length ? stocked/expectedItems.length : 0;
+    const isExpanded = pantryExpandedCats.has(cat);
+    const fillCls = pct>=0.7?'':pct<0.4?'danger':'warn';
+    const fillPct = Math.round(pct*100);
+
+    const cardsHtml = expectedItems.map(ei=>{
+      const entries = getEntriesForSlot(ei.id);
+      if(entries.length===0){
+        // MISSING SLOT
+        return `<div class="pantry-card missing" onclick="openAddFromExpected('${ei.id}','${cat}')">
+          <div class="pc-missing-name">${ei.name}</div>
+          ${ei.defaultBrand?`<div class="pc-brand" style="font-size:10px">${ei.defaultBrand}</div>`:''}
+          <div class="pc-missing-cta">+ Add to pantry</div>
+        </div>`;
+      }
+
+      // STOCKED SLOT — one or more entries
+      const totalQty = entries.reduce((s,e)=>s+(e.qty||0),0);
+      const lowThreshold = entries[0].lowThreshold||1;
+      const isLow = totalQty <= lowThreshold;
+      const anyExpiring = entries.some(e=>{ const d=daysToExpiry(e.expiry); return d!==null && d<=7; });
+      const cardCls = isLow?'low-stock':anyExpiring?'expiring':'';
+
+      if(isExpanded){
+        // EXPANDED: full list rows
+        const entriesHtml = entries.map(entry=>{
+          const days = daysToExpiry(entry.expiry);
+          let expiryHtml='';
+          if(days!==null){ const c=days<0?'crit':days<=3?'crit':days<=7?'soon':'ok'; expiryHtml=`<span class="pc-expiry ${c}" style="margin-left:4px">${days<0?'Expired':days===0?'Today':days+'d'}</span>`; }
+          return `<div class="pantry-entry-row">
+            <div class="per-main">
+              <span class="per-brand">${entry.brand||entry.size||'—'}</span>
+              ${entry.store?`<span class="per-meta">🏪 ${entry.store}</span>`:''}
+              ${entry.pricePaid?`<span class="per-meta">₱${Number(entry.pricePaid).toLocaleString()}</span>`:''}
+              ${expiryHtml}
+            </div>
+            <div class="per-right">
+              <button class="qty-btn" onclick="event.stopPropagation();changePantryEntryQty('${entry.id}',-1)">−</button>
+              <span style="font-weight:600;font-size:13px;min-width:16px;text-align:center">×${entry.qty}</span>
+              <button class="qty-btn" onclick="event.stopPropagation();changePantryEntryQty('${entry.id}',1)">+</button>
+              <button class="low-flag-btn" onclick="event.stopPropagation();openEditPantryEntry('${entry.id}')" style="color:var(--green-mid);margin-left:2px">✏️</button>
+              <button class="low-flag-btn" onclick="event.stopPropagation();removePantryEntry('${entry.id}')" style="color:var(--danger)">✕</button>
+            </div>
+          </div>`;
+        }).join('');
+        return `<div class="pantry-card ${cardCls}" style="cursor:default">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <div class="pc-name">${ei.name} ${isLow?'<span class="low-badge" style="font-size:9px">Low</span>':''}</div>
+            <span style="font-size:11px;font-weight:600;color:var(--green-deep)">×${totalQty} total</span>
+          </div>
+          ${entriesHtml}
+          <button class="btn btn-outline btn-sm" style="width:100%;margin-top:8px;font-size:11px" onclick="openAddFromExpected('${ei.id}','${cat}')">+ Add Brand</button>
+        </div>`;
+      } else {
+        // COMPACT GRID CARD
+        const brandList = entries.map(e=>e.brand||e.size||'—').join(', ');
+        const minExpiry = entries.reduce((min,e)=>{ const d=daysToExpiry(e.expiry); return (d!==null&&(min===null||d<min))?d:min; }, null);
+        let expiryHtml='';
+        if(minExpiry!==null){ const c=minExpiry<0?'crit':minExpiry<=3?'crit':minExpiry<=7?'soon':'ok'; expiryHtml=`<div class="pc-expiry ${c}">${minExpiry<0?'Expired':minExpiry===0?'Today':minExpiry+'d'}</div>`; }
+        return `<div class="pantry-card ${cardCls}" onclick="togglePantryCat('${cat}')">
+          <div class="pc-name">${ei.name}</div>
+          <div class="pc-brand" style="font-size:10px">${brandList}</div>
+          <div class="pc-qty">×${totalQty}</div>
+          ${expiryHtml}
+          ${entries.length>1?`<div style="font-size:10px;color:var(--brown-mid);margin-top:3px">${entries.length} brands</div>`:''}
+        </div>`;
+      }
+    }).join('');
+
+    return `<div class="pantry-cat-block" id="pantrycat_${cat.replace(/\W/g,'')}">
+      <div class="pantry-cat-header" onclick="togglePantryCat('${cat}')">
+        <div class="pantry-cat-title">${PANTRY_CAT_ICONS[cat]||'📦'} ${cat}</div>
+        <div class="pantry-cat-score">
+          <div class="score-bar-wrap"><div class="score-bar-fill ${fillCls}" style="width:${fillPct}%"></div></div>
+          <span class="score-text">${stocked}/${expectedItems.length}</span>
+          <span class="cat-expand-arrow ${isExpanded?'open':''}">▼</span>
+        </div>
+      </div>
+      <div class="pantry-grid ${isExpanded?'expanded':''}">${cardsHtml}</div>
+      <div style="padding:0 14px 10px">
+        <button class="btn btn-outline btn-sm" onclick="openAddExpectedToCat('${cat}')">＋ Add Expected Item</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function togglePantryCat(cat){
@@ -986,44 +1149,38 @@ function togglePantryCat(cat){
 }
 
 function scrollToCat(cat){
-  const el = document.getElementById('pantrycat_'+cat.replace(/\W/g,''));
-  if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+  const el=document.getElementById('pantrycat_'+cat.replace(/\W/g,''));
+  if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function openAddFromExpected(expectedId, cat){
-  // Pre-fill form with expected item details + auto-flag on shop list
-  const catItems = state.pantryMaster[cat]||[];
-  const ei = catItems.find(i=>i.id===expectedId);
-  if(!ei) return;
-  editPantryId = null;
-  document.getElementById('pantryModalTitle').textContent = 'Add to Pantry';
-  document.getElementById('pantryModalBtn').textContent = 'Add to Pantry';
+  const catItems=state.pantryMaster[cat]||[];
+  const ei=catItems.find(i=>i.id===expectedId); if(!ei) return;
+  editPantryId=null;
+  document.getElementById('pantryModalTitle').textContent='Add to Pantry';
+  document.getElementById('pantryModalBtn').textContent='Add to Pantry';
   clearPantryForm();
-  document.getElementById('pName').value = ei.name;
-  document.getElementById('pBrand').value = ei.defaultBrand||'';
-  document.getElementById('pCat').value = cat;
-  document.getElementById('pQty').value = '1';
-  document.getElementById('pLow').value = '1';
-  document.getElementById('pDateBought').value = todayStr();
-  // Store expectedId so we can link it
-  document.getElementById('pantryModalBtn').setAttribute('data-expected-id', expectedId);
+  document.getElementById('pName').value=ei.name;
+  document.getElementById('pBrand').value='';
+  document.getElementById('pCat').value=cat;
+  document.getElementById('pQty').value='1';
+  document.getElementById('pLow').value=(state.prefs&&state.prefs.defaultLowStock)||1;
+  document.getElementById('pDateBought').value=todayStr();
+  document.getElementById('pantryModalBtn').setAttribute('data-expected-id',expectedId);
   document.getElementById('pantryModal').classList.add('show');
 }
 
 function openAddExpectedToCat(cat){
-  const name = window.prompt('New expected item name for '+cat+':');
+  const name=window.prompt('New expected item name for '+cat+':');
   if(!name||!name.trim()) return;
   if(!state.pantryMaster[cat]) state.pantryMaster[cat]=[];
-  const id = 'pm_'+cat.replace(/\W/g,'')+'_'+Date.now();
+  const id='pm_'+cat.replace(/\W/g,'')+'_'+Date.now();
   state.pantryMaster[cat].push({id, name:name.trim(), defaultBrand:''});
   saveState(); renderPantry();
   toast('✓ "'+name.trim()+'" added as expected item');
 }
 
-function openAddPantryExpected(){
-  // Generic add — pick category first via modal
-  openAddPantryItem();
-}
+function openAddPantryExpected(){ openAddPantryItem(); }
 
 
 // ==================== SHARED MUTATIONS ====================
@@ -1069,16 +1226,21 @@ function removeHHItem(id){
   saveState(); renderHH();
 }
 
-function changePantryQty(id, delta){
-  const item=state.pantryItems.find(i=>i.id===id); if(!item) return;
-  item.qty=Math.max(0,item.qty+delta); saveState(); renderPantry(); autoAddFromPantry();
+function changePantryEntryQty(id, delta){
+  const entry=(state.pantryEntries||[]).find(e=>e.id===id); if(!entry) return;
+  entry.qty=Math.max(0,entry.qty+delta); saveState(); renderPantry(); autoAddFromPantry();
 }
 
-function removePantryItem(id){
-  if(!confirm('Remove this item from pantry?')) return;
-  state.pantryItems=state.pantryItems.filter(i=>i.id!==id);
+// keep old name working too
+function changePantryQty(id, delta){ changePantryEntryQty(id, delta); }
+
+function removePantryEntry(id){
+  if(!confirm('Remove this brand entry from pantry?')) return;
+  state.pantryEntries=(state.pantryEntries||[]).filter(e=>e.id!==id);
   saveState(); renderPantry(); autoAddFromPantry();
 }
+
+function removePantryItem(id){ removePantryEntry(id); }
 
 // ==================== SHOP MODAL ====================
 function openAddShopItem(){
@@ -1172,27 +1334,30 @@ function openAddPantryItem(){
   document.getElementById('pantryModal').classList.add('show');
 }
 
-function openEditPantryItem(id){
-  const item=state.pantryItems.find(i=>i.id===id); if(!item) return;
+function openEditPantryEntry(id){
+  const entry=(state.pantryEntries||[]).find(e=>e.id===id); if(!entry) return;
   editPantryId=id;
-  document.getElementById('pantryModalTitle').textContent='Edit Pantry Item';
+  document.getElementById('pantryModalTitle').textContent='Edit Entry';
   document.getElementById('pantryModalBtn').textContent='Save Changes';
-  document.getElementById('pName').value=item.name||'';
-  document.getElementById('pBrand').value=item.brand||'';
-  document.getElementById('pSize').value=item.size||'';
-  document.getElementById('pCat').value=item.cat||'Other';
-  document.getElementById('pQty').value=item.qty??'';
-  document.getElementById('pLow').value=item.lowThreshold||'';
-  document.getElementById('pDateBought').value=item.dateBought||'';
-  document.getElementById('pExpiry').value=item.expiry||'';
-  document.getElementById('pStore').value=item.store||'';
-  document.getElementById('pPricePaid').value=item.pricePaid||'';
+  document.getElementById('pName').value=entry.name||'';
+  document.getElementById('pBrand').value=entry.brand||'';
+  document.getElementById('pSize').value=entry.size||'';
+  document.getElementById('pCat').value=entry.cat||'Other';
+  document.getElementById('pQty').value=entry.qty??'';
+  document.getElementById('pLow').value=entry.lowThreshold||'';
+  document.getElementById('pDateBought').value=entry.dateBought||'';
+  document.getElementById('pExpiry').value=entry.expiry||'';
+  document.getElementById('pStore').value=entry.store||'';
+  document.getElementById('pPricePaid').value=entry.pricePaid||'';
   document.getElementById('pantryModal').classList.add('show');
 }
 
+// keep old name working
+function openEditPantryItem(id){ openEditPantryEntry(id); }
+
 function savePantryItem(){
   const name=document.getElementById('pName').value.trim(); if(!name) return toast('⚠️ Enter an item name first');
-  const expectedId = document.getElementById('pantryModalBtn').getAttribute('data-expected-id')||null;
+  const expectedId=document.getElementById('pantryModalBtn').getAttribute('data-expected-id')||null;
   const d={
     name,
     brand:document.getElementById('pBrand').value,
@@ -1206,26 +1371,23 @@ function savePantryItem(){
     pricePaid:parseFloat(document.getElementById('pPricePaid').value)||0,
   };
   if(editPantryId){
-    const item=state.pantryItems.find(i=>i.id===editPantryId); if(item) Object.assign(item,d);
+    // Editing existing entry
+    const entry=(state.pantryEntries||[]).find(e=>e.id===editPantryId);
+    if(entry) Object.assign(entry,d);
+    toast('✓ Entry updated');
   } else {
-    const newItem={id:'p'+Date.now(), expectedId, ...d};
-    state.pantryItems.push(newItem);
-    // Auto-flag on shop list if added from a missing expected item
+    // New entry
+    if(!state.pantryEntries) state.pantryEntries=[];
+    const newEntry={id:'pe_'+Date.now(), expectedId, ...d};
+    state.pantryEntries.push(newEntry);
+    // Auto-flag on shop list if from a missing slot
     if(expectedId){
-      const alreadyInShop = state.shopItems.some(i=>i.pantryExpectedId===expectedId);
+      const alreadyInShop=state.shopItems.some(i=>i.pantryExpectedId===expectedId);
       if(!alreadyInShop){
-        state.shopItems.push({
-          id:'pf_'+Date.now(), name:name+' 🛒', cat:d.cat, price:d.pricePaid||0,
-          qty:1, brand:d.brand||'', note:'Added from pantry', checked:false,
-          lowFlag:true, autoAdded:false, pantryExpectedId:expectedId
-        });
+        state.shopItems.push({id:'pf_'+Date.now(), name:name+' 🛒', cat:d.cat, price:d.pricePaid||0, qty:1, brand:d.brand||'', note:'Added from pantry', checked:false, lowFlag:true, autoAdded:false, pantryExpectedId:expectedId});
         toast('✓ Added to pantry and flagged on Shop list');
-      } else {
-        toast('✓ Added to pantry');
-      }
-    } else {
-      toast('✓ Added to pantry');
-    }
+      } else { toast('✓ Brand entry added to pantry'); }
+    } else { toast('✓ Added to pantry'); }
   }
   document.getElementById('pantryModalBtn').removeAttribute('data-expected-id');
   saveState(); renderPantry(); autoAddFromPantry(); closeModal('pantryModal');
@@ -1290,8 +1452,8 @@ function renderPriceHistory(){
   const query=(document.getElementById('priceSearchInput')?.value||'').toLowerCase().trim();
   const container=document.getElementById('priceHistoryList');
 
-  // Collect all pantry items with price + store data
-  const records=state.pantryItems.filter(i=>i.pricePaid && i.store);
+  // Collect all entries with price + store data
+  const records=(state.pantryEntries||[]).filter(e=>e.pricePaid && e.store);
 
   // Group by item name (normalized)
   const grouped={};
@@ -1360,7 +1522,7 @@ function renderPantryCatSettings(){
   if(!cats.length){container.innerHTML='<div class="empty-state"><p>No categories yet.</p></div>'; return;}
   container.innerHTML=cats.map(cat=>{
     const count=(state.pantryMaster[cat]||[]).length;
-    const stocked=state.pantryItems.filter(i=>i.cat===cat).length;
+    const stocked=(state.pantryEntries||[]).filter(e=>e.cat===cat).length;
     return `<div class="settings-item">
       <div>
         <div class="settings-item-name">${PANTRY_CAT_ICONS[cat]||'📦'} ${cat}</div>
