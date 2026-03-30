@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PantryTrack</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green-deep: #2d5016;
+    --green-mid: #4a7c2f;
+    --green-soft: #7aad52;
+    --green-pale: #c8ddb0;
+    --green-mist: #eaf3df;
+    --cream: #fdf8f0;
+    --cream-warm: #f5edd8;
+    --brown-light: #c4a882;
+    --brown-mid: #9b7c55;
+    --brown-dark: #6b5237;
+    --text-dark: #2c2416;
+    --text-mid: #5c4a32;
+    --text-soft: #8a7560;
+    --white: #ffffff;
+    --warning: #d46b1a;
+    --warning-bg: #fdf0e0;
+    --danger: #b83c2b;
+    --danger-bg: #fdecea;
+    --shadow: 0 2px 12px rgba(45,80,22,0.10);
+    --shadow-lg: 0 8px 32px rgba(45,80,22,0.14);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--text-dark); min-height: 100vh; background-image: radial-gradient(ellipse at 10% 0%, rgba(122,173,82,0.12) 0%, transparent 60%), radial-gradient(ellipse at 90% 100%, rgba(196,168,130,0.15) 0%, transparent 60%); }
+
+  /* HEADER */
+  .app-header { background: var(--white); border-bottom: 2px solid var(--green-pale); padding: 16px 20px 0; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
+  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 38px; height: 38px; background: var(--green-deep); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .logo-text { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--green-deep); letter-spacing: -0.5px; }
+  .logo-sub { font-size: 11px; color: var(--text-soft); font-weight: 400; display: block; margin-top: -2px; }
+  .header-date { text-align: right; }
+  .date-day { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 600; color: var(--green-deep); }
+  .date-full { font-size: 11px; color: var(--text-soft); }
+
+  /* TABS */
+  .tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; padding-bottom: 1px; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { flex-shrink: 0; padding: 10px 16px; font-size: 13px; font-weight: 500; color: var(--text-soft); border: none; background: transparent; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap; font-family: 'DM Sans', sans-serif; }
+  .tab.active { color: var(--green-deep); border-bottom-color: var(--green-deep); font-weight: 600; }
+  .tab:hover:not(.active) { color: var(--green-mid); }
+  .tab-badge { display: inline-block; background: var(--warning); color: white; font-size: 10px; font-weight: 700; border-radius: 10px; padding: 1px 6px; margin-left: 4px; vertical-align: middle; }
+
+  /* MAIN */
+  .main { padding: 16px; max-width: 480px; margin: 0 auto; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  /* ALERTS */
+  .alert-banner { background: var(--warning-bg); border: 1.5px solid var(--warning); border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; display: none; position: relative; }
+  .alert-banner.show { display: block; }
+  .alert-banner.danger { background: var(--danger-bg); border-color: var(--danger); }
+  .alert-title { font-weight: 600; font-size: 13px; color: var(--warning); display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .alert-banner.danger .alert-title { color: var(--danger); }
+  .alert-items { font-size: 12px; color: var(--text-mid); line-height: 1.7; }
+  .alert-dismiss { position: absolute; top: 8px; right: 10px; background: none; border: none; cursor: pointer; font-size: 14px; color: var(--text-soft); }
+
+  /* CARDS */
+  .section-card { background: var(--white); border-radius: 16px; padding: 16px; margin-bottom: 14px; box-shadow: var(--shadow); border: 1.5px solid var(--green-pale); }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .section-title { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 600; color: var(--green-deep); display: flex; align-items: center; gap: 8px; }
+  .section-meta { font-size: 11px; color: var(--text-soft); font-weight: 500; }
+
+  /* TOTAL BAR */
+  .total-bar { background: var(--green-mist); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .total-label { font-size: 12px; color: var(--green-deep); font-weight: 500; }
+  .total-sub { font-size: 11px; color: var(--text-soft); margin-top: 2px; }
+  .total-amount { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; color: var(--green-deep); }
+
+  /* SHOP ITEMS */
+  .shop-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--cream-warm); transition: opacity 0.2s; animation: slideIn 0.15s ease; }
+  .shop-item:last-child { border-bottom: none; }
+  .shop-item.checked { opacity: 0.45; }
+  .shop-item.checked .item-name { text-decoration: line-through; color: var(--text-soft); }
+  .item-check { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--green-soft); background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; transition: all 0.15s; font-size: 13px; }
+  .item-check.checked { background: var(--green-mid); border-color: var(--green-mid); color: white; }
+  .item-body { flex: 1; min-width: 0; }
+  .item-name { font-size: 14px; font-weight: 500; color: var(--text-dark); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .item-brand { font-size: 11px; color: var(--text-soft); background: var(--cream-warm); padding: 1px 7px; border-radius: 10px; }
+  .low-badge { font-size: 10px; font-weight: 600; color: var(--warning); background: var(--warning-bg); padding: 1px 6px; border-radius: 8px; }
+  .auto-badge { font-size: 10px; font-weight: 600; color: var(--danger); background: var(--danger-bg); padding: 1px 6px; border-radius: 8px; }
+  .item-sub { font-size: 11px; color: var(--text-soft); margin-top: 2px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .item-note { width: 100%; margin-top: 6px; font-size: 12px; border: 1px solid var(--cream-warm); border-radius: 8px; padding: 6px 8px; font-family: 'DM Sans', sans-serif; color: var(--text-mid); background: var(--cream); outline: none; resize: none; height: 32px; transition: border-color 0.2s, height 0.2s; }
+  .item-note:focus { border-color: var(--green-soft); height: 56px; background: white; }
+  .item-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+  .qty-control { display: flex; align-items: center; gap: 4px; background: var(--cream-warm); border-radius: 8px; padding: 2px 4px; }
+  .qty-btn { width: 22px; height: 22px; border: none; background: none; cursor: pointer; font-size: 14px; color: var(--green-deep); display: flex; align-items: center; justify-content: center; border-radius: 4px; font-weight: 700; }
+  .qty-btn:hover { background: var(--green-pale); }
+  .qty-val { font-size: 13px; font-weight: 600; color: var(--text-dark); min-width: 16px; text-align: center; }
+  .item-price { font-size: 12px; color: var(--brown-mid); font-weight: 500; }
+  .low-flag-btn { font-size: 10px; border: none; background: none; cursor: pointer; color: var(--text-soft); padding: 0; }
+  .low-flag-btn.flagged { color: var(--warning); font-weight: 600; }
+  .category-label { font-size: 11px; font-weight: 600; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.8px; padding: 8px 0 4px; border-bottom: 1px solid var(--green-mist); margin-bottom: 2px; }
+
+  /* BUTTONS */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+  .btn-primary { background: var(--green-deep); color: white; }
+  .btn-primary:hover { background: var(--green-mid); }
+  .btn-outline { background: white; color: var(--green-deep); border: 1.5px solid var(--green-pale); }
+  .btn-outline:hover { border-color: var(--green-mid); background: var(--green-mist); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-danger { background: var(--danger-bg); color: var(--danger); border: 1.5px solid #f0c8c2; }
+  .action-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+
+  /* INVENTORY */
+  .inv-item { padding: 12px 0; border-bottom: 1px solid var(--cream-warm); animation: slideIn 0.15s ease; }
+  .inv-item:last-child { border-bottom: none; }
+  .inv-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .inv-name { font-size: 14px; font-weight: 600; color: var(--text-dark); }
+  .inv-brand-size { font-size: 11px; color: var(--text-soft); margin-top: 1px; }
+  .expiry-tag { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 8px; white-space: nowrap; flex-shrink: 0; }
+  .expiry-ok { background: var(--green-mist); color: var(--green-deep); }
+  .expiry-soon { background: var(--warning-bg); color: var(--warning); }
+  .expiry-critical { background: var(--danger-bg); color: var(--danger); }
+  .expiry-none { background: var(--cream-warm); color: var(--text-soft); }
+  .inv-details { display: flex; gap: 12px; margin-top: 6px; font-size: 12px; color: var(--text-soft); flex-wrap: wrap; align-items: center; }
+  .inv-qty-ctrl { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-mid); }
+  .inv-chips { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .chip { font-size: 11px; padding: 2px 8px; border-radius: 8px; background: var(--cream-warm); color: var(--text-soft); }
+  .chip.price { background: #f5ead0; color: var(--brown-mid); font-weight: 600; }
+  .inv-actions { display: flex; gap: 6px; margin-top: 8px; }
+
+  /* MONTHLY NOTICE */
+  .monthly-notice { background: var(--cream-warm); border-radius: 10px; padding: 10px 12px; font-size: 12px; color: var(--text-mid); margin-bottom: 14px; border-left: 3px solid var(--brown-light); }
+
+  /* SUMMARY */
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .summary-card { background: var(--white); border-radius: 14px; padding: 14px; border: 1.5px solid var(--green-pale); text-align: center; }
+  .summary-value { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--green-deep); display: block; }
+  .summary-label { font-size: 11px; color: var(--text-soft); margin-top: 2px; }
+  .history-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--cream-warm); font-size: 13px; }
+  .history-item:last-child { border-bottom: none; }
+  .history-date { color: var(--text-soft); font-size: 12px; }
+  .history-amount { font-weight: 600; color: var(--green-deep); font-family: 'Playfair Display', serif; }
+
+  /* EMPTY */
+  .empty-state { text-align: center; padding: 32px 16px; color: var(--text-soft); }
+  .empty-state .empty-icon { font-size: 40px; margin-bottom: 10px; }
+  .empty-state p { font-size: 13px; line-height: 1.6; }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(44,36,22,0.35); z-index: 200; align-items: flex-end; justify-content: center; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: white; border-radius: 20px 20px 0 0; padding: 20px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; animation: slideUp 0.25s ease; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .modal-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: var(--green-deep); }
+  .modal-close { background: var(--cream-warm); border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; color: var(--text-mid); flex-shrink: 0; }
+
+  /* FORM */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .form-field { display: flex; flex-direction: column; gap: 4px; }
+  .form-field.full { grid-column: 1 / -1; }
+  .form-label { font-size: 11px; font-weight: 600; color: var(--text-mid); text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-input { padding: 8px 10px; border: 1.5px solid var(--green-pale); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text-dark); background: white; outline: none; transition: border-color 0.2s; width: 100%; }
+  .form-input:focus { border-color: var(--green-mid); }
+  select.form-input { cursor: pointer; }
+  .form-section-divider { grid-column: 1 / -1; font-size: 11px; font-weight: 700; color: var(--green-deep); text-transform: uppercase; letter-spacing: 0.8px; padding: 10px 0 4px; border-top: 1px solid var(--green-mist); margin-top: 4px; }
+  .form-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--green-pale); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-top">
+    <div class="logo">
+      <div class="logo-icon">🌿</div>
+      <div>
+        <span class="logo-text">PantryTrack</span>
+        <span class="logo-sub">Jo's Home Manager</span>
+      </div>
+    </div>
+    <div class="header-date">
+      <div class="date-day" id="headerDay"></div>
+      <div class="date-full" id="headerDate"></div>
+    </div>
+  </div>
+  <nav class="tabs">
+    <button class="tab active" onclick="switchTab('shop')">🛒 Shop</button>
+    <button class="tab" onclick="switchTab('household')" id="householdTab">🧺 Household</button>
+    <button class="tab" onclick="switchTab('pantry')">📦 Pantry</button>
+    <button class="tab" onclick="switchTab('summary')">📊 Summary</button>
+  </nav>
+</header>
+
+<main class="main">
+
+  <!-- SHOP TAB -->
+  <div class="tab-content active" id="tab-shop">
+    <div class="alert-banner danger" id="expiryAlert">
+      <button class="alert-dismiss" onclick="document.getElementById('expiryAlert').classList.remove('show')">✕</button>
+      <div class="alert-title">⚠️ Expiring Soon — Auto-added to list</div>
+      <div class="alert-items" id="expiryAlertItems"></div>
+    </div>
+    <div class="alert-banner" id="lowAlert">
+      <button class="alert-dismiss" onclick="document.getElementById('lowAlert').classList.remove('show')">✕</button>
+      <div class="alert-title">🔴 Running Low — Auto-added to list</div>
+      <div class="alert-items" id="lowAlertItems"></div>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">🥬 Weekly Groceries</div>
+        <div class="section-meta" id="shopWeekLabel"></div>
+      </div>
+      <div class="total-bar">
+        <div>
+          <div class="total-label">Estimated Total</div>
+          <div class="total-sub" id="shopTotalSub"></div>
+        </div>
+        <span class="total-amount" id="shopTotal">₱0</span>
+      </div>
+      <div id="shopList"></div>
+      <div class="action-row">
+        <button class="btn btn-primary btn-sm" onclick="logShoppingTrip()">✓ Done Shopping</button>
+        <button class="btn btn-outline btn-sm" onclick="uncheckAll('shop')">↺ Uncheck All</button>
+        <button class="btn btn-outline btn-sm" onclick="openAddShopItem()">+ Add Item</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOUSEHOLD TAB -->
+  <div class="tab-content" id="tab-household">
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">🧴 Monthly Household</div>
+        <div class="section-meta" id="householdLabel"></div>
+      </div>
+      <div class="monthly-notice" id="householdNotice"></div>
+      <div class="total-bar">
+        <div>
+          <div class="total-label">Estimated Total</div>
+          <div class="total-sub" id="hhTotalSub"></div>
+        </div>
+        <span class="total-amount" id="householdTotal">₱0</span>
+      </div>
+      <div id="householdList"></div>
+      <div class="action-row">
+        <button class="btn btn-primary btn-sm" onclick="logHouseholdTrip()">✓ Done Shopping</button>
+        <button class="btn btn-outline btn-sm" onclick="uncheckAll('hh')">↺ Uncheck All</button>
+        <button class="btn btn-outline btn-sm" onclick="openAddHHItem()">+ Add Item</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANTRY TAB -->
+  <div class="tab-content" id="tab-pantry">
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">📦 Inventory</div>
+        <div class="section-meta" id="pantryCount"></div>
+      </div>
+      <div id="pantryList"></div>
+      <div class="action-row">
+        <button class="btn btn-primary btn-sm" onclick="openAddPantryItem(null)">+ Add Item</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY TAB -->
+  <div class="tab-content" id="tab-summary">
+    <div class="summary-grid">
+      <div class="summary-card"><span class="summary-value" id="monthSpend">₱0</span><div class="summary-label">This Month</div></div>
+      <div class="summary-card"><span class="summary-value" id="tripCount">0</span><div class="summary-label">Trips This Month</div></div>
+      <div class="summary-card"><span class="summary-value" id="avgTrip">₱0</span><div class="summary-label">Avg Per Trip</div></div>
+      <div class="summary-card"><span class="summary-value" id="totalAllTime">₱0</span><div class="summary-label">All-Time Spend</div></div>
+    </div>
+    <div class="section-card">
+      <div class="section-header"><div class="section-title">📋 Trip History</div></div>
+      <div id="tripHistory"></div>
+    </div>
+    <div class="section-card">
+      <div class="section-header"><div class="section-title">💾 Backup & Restore</div></div>
+      <p style="font-size:12px;color:var(--text-soft);margin-bottom:12px;line-height:1.6">Export your data as a JSON file to keep a safe backup. Re-import on a new device or after a cache clear to restore everything.</p>
+      <div class="action-row" style="margin-top:0">
+        <button class="btn btn-outline btn-sm" onclick="exportData()">⬇ Export JSON</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('importFile').click()">⬆ Import JSON</button>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+      </div>
+    </div>
+    <div class="action-row">
+      <button class="btn btn-danger btn-sm" onclick="clearHistory()">🗑 Clear History</button>
+    </div>
+  </div>
+
+</main>
+
+<!-- SHOP ITEM MODAL -->
+<div class="modal-overlay" id="shopModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="shopModalTitle">Add to Shopping List</div>
+      <button class="modal-close" onclick="closeModal('shopModal')">✕</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-field full"><label class="form-label">Item Name *</label><input class="form-input" id="sName" placeholder="e.g. Kangkong"></div>
+      <div class="form-field"><label class="form-label">Category</label>
+        <select class="form-input" id="sCat">
+          <option>Proteins</option><option>Pantry Staples</option><option>Vegetables & Legumes</option><option>Snacks & Drinks</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-field"><label class="form-label">Est. Price (₱)</label><input class="form-input" type="number" id="sPrice" placeholder="0" min="0"></div>
+      <div class="form-field full"><label class="form-label">Brand / Size</label><input class="form-input" id="sBrand" placeholder="e.g. Magnolia 1kg"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" id="shopModalBtn" onclick="saveShopItem()">Add Item</button>
+      <button class="btn btn-outline" onclick="closeModal('shopModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- HOUSEHOLD ITEM MODAL -->
+<div class="modal-overlay" id="hhModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="hhModalTitle">Add Household Item</div>
+      <button class="modal-close" onclick="closeModal('hhModal')">✕</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-field full"><label class="form-label">Item Name *</label><input class="form-input" id="hName" placeholder="e.g. Dishwashing Liquid"></div>
+      <div class="form-field"><label class="form-label">Category</label>
+        <select class="form-input" id="hCat">
+          <option>Laundry</option><option>Bath & Body</option><option>Cleaning Supplies</option><option>Feminine Care</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-field"><label class="form-label">Est. Price (₱)</label><input class="form-input" type="number" id="hPrice" placeholder="0" min="0"></div>
+      <div class="form-field full"><label class="form-label">Brand / Size</label><input class="form-input" id="hBrand" placeholder="e.g. Ariel 1kg"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" id="hhModalBtn" onclick="saveHHItem()">Add Item</button>
+      <button class="btn btn-outline" onclick="closeModal('hhModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- PANTRY ITEM MODAL -->
+<div class="modal-overlay" id="pantryModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="pantryModalTitle">Add to Pantry</div>
+      <button class="modal-close" onclick="closeModal('pantryModal')">✕</button>
+    </div>
+    <div class="form-grid">
+      <!-- Basic -->
+      <div class="form-field full"><label class="form-label">Item Name *</label><input class="form-input" id="pName" placeholder="e.g. Soy Sauce"></div>
+      <div class="form-field"><label class="form-label">Brand</label><input class="form-input" id="pBrand" placeholder="e.g. Silver Swan"></div>
+      <div class="form-field"><label class="form-label">Size / Unit</label><input class="form-input" id="pSize" placeholder="e.g. 500ml"></div>
+      <div class="form-field"><label class="form-label">Category</label>
+        <select class="form-input" id="pCat">
+          <option>Proteins</option><option>Pantry Staples</option><option>Vegetables & Legumes</option>
+          <option>Snacks & Drinks</option><option>Laundry</option><option>Bath & Body</option>
+          <option>Cleaning Supplies</option><option>Feminine Care</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-field"><label class="form-label">Quantity on Hand</label><input class="form-input" type="number" id="pQty" placeholder="1" min="0"></div>
+      <div class="form-field"><label class="form-label">Low Stock Alert At</label><input class="form-input" type="number" id="pLow" placeholder="1" min="0"></div>
+      <!-- Dates -->
+      <div class="form-section-divider">📅 Dates</div>
+      <div class="form-field"><label class="form-label">Date Purchased</label><input class="form-input" type="date" id="pDateBought"></div>
+      <div class="form-field"><label class="form-label">Expiry Date</label><input class="form-input" type="date" id="pExpiry"></div>
+      <!-- Purchase details -->
+      <div class="form-section-divider">🛒 Purchase Details</div>
+      <div class="form-field"><label class="form-label">Store</label><input class="form-input" id="pStore" placeholder="e.g. SM Savemore"></div>
+      <div class="form-field"><label class="form-label">Price Paid (₱)</label><input class="form-input" type="number" id="pPricePaid" placeholder="0" min="0"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" id="pantryModalBtn" onclick="savePantryItem()">Add to Pantry</button>
+      <button class="btn btn-outline" onclick="closeModal('pantryModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== DEFAULTS ====================
+const DEFAULT_SHOP = [
+  {id:'s1',  name:'Eggs',                 cat:'Proteins',             price:120, qty:1, brand:'12 pcs tray',       note:'', checked:false, lowFlag:false, autoAdded:false},
+  {id:'s2',  name:'Chicken (whole/cuts)', cat:'Proteins',             price:280, qty:1, brand:'1kg',               note:'', checked:false, lowFlag:false, autoAdded:false},
+  {id:'s3',  name:'Pork (kasim/liempo)',  cat:'Proteins',             price:320, qty:1, brand:'500g',              note:'', checked:false, lowFlag:false, autoAdded:false},
+  {id:'s4',  name:'Canned Tuna',          cat:'Proteins',             price:65,  qty:2, brand:'180g CDO/Century',  note:'', checked:false, lowFlag:false, autoAdded:false},
+  {id:'s5',  name:'Sardines',             cat:'Proteins',             price:55,  qty:2, brand:'155g Ligo',         note:'', checked:false, lowFlag:false, autoAdded:false},
+  {id:'s6',  name:'Rice',                 cat:'Pantry Staples',       price:320, qty:1, brand:'5kg',               note:'', checked:false, lowFlag:false, autoAdded:false},
+  {id:'s7',  name:'Soy Sauce',            cat:'Pantry Staples',       price:55,  qty:1, brand:'500ml Silver Swan', note:'', checked:false, lowFlag:false, autoAdded:false},
+  {id:'s8',  name:'Vinegar',              cat:'Pantry Staples',       price:45,  qty:1, brand:'500ml Datu Puti',   note:'', checked:false, lowFlag:false, autoAdded:false},
+  {id:'s9',  name:'Cooking Oil',          cat:'Pantry Staples',       price:120, qty:1, brand:'1L Minola',         note:'', checked:false, lowFlag:false, autoAdded:false},
+  {id:'s10', name:'Garlic',               cat:'Pantry Staples',       price:40,  qty:1, brand:'100g',              note:'', checked:false, lowFlag:false, autoAdded:false},
+  {id:'s11', name:'Onion',                cat:'Pantry Staples',       price:50,  qty:1, brand:'200g',              note:'', checked:false, lowFlag:false, autoAdded:false},
+  {id:'s12', name:'Bay Leaves',           cat:'Pantry Staples',       price:20,  qty:1, brand:'small pack',        note:'', checked:false, lowFlag:false, autoAdded:false},
+  {id:'s13', name:'Monggo (Mung Beans)',  cat:'Vegetables & Legumes', price:60,  qty:1, brand:'250g',              note:'', checked:false, lowFlag:false, autoAdded:false},
+  {id:'s14', name:'Sitaw (String Beans)', cat:'Vegetables & Legumes', price:35,  qty:1, brand:'1 bundle',          note:'', checked:false, lowFlag:false, autoAdded:false},
+  {id:'s15', name:'Kangkong',             cat:'Vegetables & Legumes', price:25,  qty:1, brand:'1 bundle',          note:'', checked:false, lowFlag:false, autoAdded:false},
+  {id:'s16', name:'Tomatoes',             cat:'Vegetables & Legumes', price:40,  qty:1, brand:'200g',              note:'', checked:false, lowFlag:false, autoAdded:false},
+  {id:'s17', name:'Instant Coffee',       cat:'Snacks & Drinks',      price:80,  qty:1, brand:'Nescafé 3-in-1',   note:'', checked:false, lowFlag:false, autoAdded:false},
+  {id:'s18', name:'Bread',                cat:'Snacks & Drinks',      price:65,  qty:1, brand:'Gardenia',          note:'', checked:false, lowFlag:false, autoAdded:false},
+  {id:'s19', name:'Yogurt / Snack',       cat:'Snacks & Drinks',      price:55,  qty:1, brand:'',                  note:'', checked:false, lowFlag:false, autoAdded:false},
+];
+
+const DEFAULT_HH = [
+  {id:'h1',  name:'Laundry Detergent',     cat:'Laundry',           price:120, qty:1, brand:'Ariel 1kg',    note:'', checked:false, lowFlag:false},
+  {id:'h2',  name:'Fabric Conditioner',    cat:'Laundry',           price:85,  qty:1, brand:'Downy 800ml',  note:'', checked:false, lowFlag:false},
+  {id:'h3',  name:'Bath Soap',             cat:'Bath & Body',       price:45,  qty:2, brand:'Dove',         note:'', checked:false, lowFlag:false},
+  {id:'h4',  name:'Shampoo',               cat:'Bath & Body',       price:130, qty:1, brand:'400ml',        note:'', checked:false, lowFlag:false},
+  {id:'h5',  name:'Toothpaste',            cat:'Bath & Body',       price:75,  qty:1, brand:'Colgate 150g', note:'', checked:false, lowFlag:false},
+  {id:'h6',  name:'Deodorant',             cat:'Bath & Body',       price:90,  qty:1, brand:'',             note:'', checked:false, lowFlag:false},
+  {id:'h7',  name:'Body Lotion',           cat:'Bath & Body',       price:150, qty:1, brand:'',             note:'', checked:false, lowFlag:false},
+  {id:'h8',  name:'Dishwashing Liquid',    cat:'Cleaning Supplies', price:75,  qty:1, brand:'Joy 500ml',    note:'', checked:false, lowFlag:false},
+  {id:'h9',  name:'Floor Cleaner / Lysol', cat:'Cleaning Supplies', price:120, qty:1, brand:'500ml',        note:'', checked:false, lowFlag:false},
+  {id:'h10', name:'Toilet Bowl Cleaner',   cat:'Cleaning Supplies', price:65,  qty:1, brand:'Domex',        note:'', checked:false, lowFlag:false},
+  {id:'h11', name:'Trash Bags',            cat:'Cleaning Supplies', price:50,  qty:1, brand:'medium roll',  note:'', checked:false, lowFlag:false},
+  {id:'h12', name:'Sponge / Dishcloth',    cat:'Cleaning Supplies', price:35,  qty:2, brand:'',             note:'', checked:false, lowFlag:false},
+  {id:'h13', name:'Sanitary Pads',         cat:'Feminine Care',     price:120, qty:1, brand:'',             note:'', checked:false, lowFlag:false},
+  {id:'h14', name:'Cotton Rounds',         cat:'Feminine Care',     price:55,  qty:1, brand:'',             note:'', checked:false, lowFlag:false},
+];
+
+// ==================== STATE ====================
+let state = {shopItems:[], householdItems:[], pantryItems:[], tripHistory:[], masterShop:null, masterHH:null};
+let editShopId=null, editHHId=null, editPantryId=null;
+
+function deepCopy(o){ return JSON.parse(JSON.stringify(o)); }
+
+function loadState(){
+  try {
+    const raw = localStorage.getItem('pantrytrack_v3');
+    if(raw){
+      const saved = JSON.parse(raw);
+      state = {...state, ...saved};
+      if(!state.masterShop) state.masterShop = deepCopy(state.shopItems.filter(i=>!i.autoAdded));
+      if(!state.masterHH)   state.masterHH   = deepCopy(state.householdItems);
+    } else {
+      state.shopItems      = deepCopy(DEFAULT_SHOP);
+      state.householdItems = deepCopy(DEFAULT_HH);
+      state.masterShop     = deepCopy(DEFAULT_SHOP);
+      state.masterHH       = deepCopy(DEFAULT_HH);
+      state.pantryItems    = [];
+      state.tripHistory    = [];
+      saveState();
+    }
+  } catch(e){
+    state.shopItems      = deepCopy(DEFAULT_SHOP);
+    state.householdItems = deepCopy(DEFAULT_HH);
+    state.masterShop     = deepCopy(DEFAULT_SHOP);
+    state.masterHH       = deepCopy(DEFAULT_HH);
+  }
+}
+function saveState(){ localStorage.setItem('pantrytrack_v3', JSON.stringify(state)); }
+
+// ==================== DATE HELPERS ====================
+function todayStr(){ return new Date().toISOString().split('T')[0]; }
+function fmtDate(d){ if(!d) return ''; return new Date(d+'T00:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'}); }
+function daysToExpiry(ds){ if(!ds) return null; const t=new Date(); t.setHours(0,0,0,0); const e=new Date(ds+'T00:00:00'); return Math.round((e-t)/86400000); }
+function isFirstFriday(){ const d=new Date(); return d.getDay()===5 && d.getDate()<=7; }
+function nextFirstFriday(){ const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()+1); while(d.getDay()!==5) d.setDate(d.getDate()+1); return d; }
+
+// ==================== AUTO-ADD ====================
+function autoAddFromPantry(){
+  state.shopItems = state.shopItems.filter(i=>!i.autoAdded);
+  const expiring=[], low=[];
+  state.pantryItems.forEach(item=>{
+    const days = daysToExpiry(item.expiry);
+    const isLow = typeof item.qty==='number' && item.qty<=(item.lowThreshold||1);
+    if(days!==null && days>=0 && days<=7){
+      expiring.push({name:item.name, days});
+      state.shopItems.push({id:'ax_'+item.id, name:item.name+' (expiring)', cat:item.cat||'Other', price:0, qty:1, brand:item.brand||'', note:'Expires '+item.expiry, checked:false, lowFlag:false, autoAdded:true});
+    } else if(isLow){
+      low.push({name:item.name, qty:item.qty});
+      state.shopItems.push({id:'al_'+item.id, name:item.name+' (low stock)', cat:item.cat||'Other', price:0, qty:1, brand:item.brand||'', note:'Only '+item.qty+' left', checked:false, lowFlag:false, autoAdded:true});
+    }
+  });
+  const ea=document.getElementById('expiryAlert'), la=document.getElementById('lowAlert');
+  if(expiring.length){ ea.classList.add('show'); document.getElementById('expiryAlertItems').innerHTML=expiring.map(i=>`${i.name} — ${i.days===0?'TODAY':i.days+'d left'}`).join('<br>'); }
+  if(low.length){ la.classList.add('show'); document.getElementById('lowAlertItems').innerHTML=low.map(i=>`${i.name} — ${i.qty} remaining`).join('<br>'); }
+  saveState();
+}
+
+// ==================== RENDER SHOP ====================
+function renderShop(){
+  const cats=[...new Set(state.shopItems.map(i=>i.cat))];
+  let html='';
+  cats.forEach(cat=>{
+    const items=state.shopItems.filter(i=>i.cat===cat); if(!items.length) return;
+    html+=`<div class="category-label">${cat}</div>`;
+    items.forEach(item=>{
+      html+=`<div class="shop-item ${item.checked?'checked':''}">
+        <div class="item-check ${item.checked?'checked':''}" onclick="toggleCheck('shop','${item.id}')">${item.checked?'✓':''}</div>
+        <div class="item-body">
+          <div class="item-name">${item.name}${item.brand?`<span class="item-brand">${item.brand}</span>`:''}${item.lowFlag?`<span class="low-badge">🔴 Low</span>`:''}${item.autoAdded?`<span class="auto-badge">⚡ Auto</span>`:''}</div>
+          <div class="item-sub">
+            <span>₱${(item.price*item.qty).toLocaleString()}</span>
+            <button class="low-flag-btn ${item.lowFlag?'flagged':''}" onclick="toggleLowFlag('${item.id}')">${item.lowFlag?'🔴 Flagged':'○ Flag Low'}</button>
+          </div>
+          <textarea class="item-note" placeholder="Note…" onchange="updateNote('shop','${item.id}',this.value)">${item.note||''}</textarea>
+        </div>
+        <div class="item-controls">
+          <div class="qty-control">
+            <button class="qty-btn" onclick="changeQty('shop','${item.id}',-1)">−</button>
+            <span class="qty-val">${item.qty}</span>
+            <button class="qty-btn" onclick="changeQty('shop','${item.id}',1)">+</button>
+          </div>
+          <span class="item-price">₱${item.price}/ea</span>
+          ${!item.autoAdded?`<button class="low-flag-btn" onclick="openEditShopItem('${item.id}')" style="color:var(--green-mid)">✏️ edit</button>`:''}
+          <button class="low-flag-btn" onclick="removeShopItem('${item.id}')" style="color:var(--danger)">✕ remove</button>
+        </div>
+      </div>`;
+    });
+  });
+  document.getElementById('shopList').innerHTML = html||'<div class="empty-state"><div class="empty-icon">🛒</div><p>No items yet.</p></div>';
+  const all=state.shopItems.reduce((s,i)=>s+(i.price*i.qty),0);
+  const rem=state.shopItems.filter(i=>!i.checked).reduce((s,i)=>s+(i.price*i.qty),0);
+  document.getElementById('shopTotal').textContent='₱'+rem.toLocaleString();
+  document.getElementById('shopTotalSub').textContent=all!==rem?`Full list: ₱${all.toLocaleString()}`:'';
+}
+
+// ==================== RENDER HOUSEHOLD ====================
+function renderHH(){
+  const first=isFirstFriday();
+  const notice=document.getElementById('householdNotice');
+  notice.textContent=first?'✅ First Friday of the month — monthly household run active!':'Next monthly run: '+fmtDate(nextFirstFriday().toISOString().split('T')[0])+'. You can still edit anytime.';
+  notice.style.borderLeftColor=first?'var(--green-mid)':'var(--brown-light)';
+  const cats=[...new Set(state.householdItems.map(i=>i.cat))];
+  let html='';
+  cats.forEach(cat=>{
+    const items=state.householdItems.filter(i=>i.cat===cat); if(!items.length) return;
+    html+=`<div class="category-label">${cat}</div>`;
+    items.forEach(item=>{
+      html+=`<div class="shop-item ${item.checked?'checked':''}">
+        <div class="item-check ${item.checked?'checked':''}" onclick="toggleCheck('hh','${item.id}')">${item.checked?'✓':''}</div>
+        <div class="item-body">
+          <div class="item-name">${item.name}${item.brand?`<span class="item-brand">${item.brand}</span>`:''}</div>
+          <div class="item-sub">₱${(item.price*item.qty).toLocaleString()}</div>
+          <textarea class="item-note" placeholder="Note…" onchange="updateNote('hh','${item.id}',this.value)">${item.note||''}</textarea>
+        </div>
+        <div class="item-controls">
+          <div class="qty-control">
+            <button class="qty-btn" onclick="changeQty('hh','${item.id}',-1)">−</button>
+            <span class="qty-val">${item.qty}</span>
+            <button class="qty-btn" onclick="changeQty('hh','${item.id}',1)">+</button>
+          </div>
+          <span class="item-price">₱${item.price}/ea</span>
+          <button class="low-flag-btn" onclick="openEditHHItem('${item.id}')" style="color:var(--green-mid)">✏️ edit</button>
+          <button class="low-flag-btn" onclick="removeHHItem('${item.id}')" style="color:var(--danger)">✕ remove</button>
+        </div>
+      </div>`;
+    });
+  });
+  document.getElementById('householdList').innerHTML=html||'<div class="empty-state"><div class="empty-icon">🧴</div><p>No items.</p></div>';
+  const all=state.householdItems.reduce((s,i)=>s+(i.price*i.qty),0);
+  const rem=state.householdItems.filter(i=>!i.checked).reduce((s,i)=>s+(i.price*i.qty),0);
+  document.getElementById('householdTotal').textContent='₱'+rem.toLocaleString();
+  document.getElementById('hhTotalSub').textContent=all!==rem?`Full list: ₱${all.toLocaleString()}`:'';
+}
+
+// ==================== RENDER PANTRY ====================
+function renderPantry(){
+  document.getElementById('pantryCount').textContent=state.pantryItems.length+' items';
+  const container=document.getElementById('pantryList');
+  if(!state.pantryItems.length){ container.innerHTML='<div class="empty-state"><div class="empty-icon">📦</div><p>No pantry items yet.<br>Tap + Add Item to track inventory, expiry dates, and purchase history.</p></div>'; return; }
+  const cats=[...new Set(state.pantryItems.map(i=>i.cat||'Other'))];
+  let html='';
+  cats.forEach(cat=>{
+    const items=state.pantryItems.filter(i=>(i.cat||'Other')===cat); if(!items.length) return;
+    html+=`<div class="category-label">${cat}</div>`;
+    items.forEach(item=>{
+      const days=daysToExpiry(item.expiry);
+      let ec='expiry-none', et='No expiry';
+      if(days!==null){
+        if(days<0)       {ec='expiry-critical'; et='Expired '+Math.abs(days)+'d ago';}
+        else if(days<=3) {ec='expiry-critical'; et=days===0?'Expires TODAY':days+'d left';}
+        else if(days<=7) {ec='expiry-soon';     et=days+'d left';}
+        else             {ec='expiry-ok';       et=fmtDate(item.expiry);}
+      }
+      const isLow=typeof item.qty==='number' && item.qty<=(item.lowThreshold||1);
+      html+=`<div class="inv-item">
+        <div class="inv-top">
+          <div>
+            <div class="inv-name">${item.name} ${isLow?'<span class="low-badge">🔴 Low</span>':''}</div>
+            <div class="inv-brand-size">${[item.brand,item.size].filter(Boolean).join(' · ')||'—'}</div>
+          </div>
+          <span class="expiry-tag ${ec}">${et}</span>
+        </div>
+        <div class="inv-details">
+          <div class="inv-qty-ctrl">
+            Qty:
+            <button class="qty-btn" onclick="changePantryQty('${item.id}',-1)" style="background:var(--cream-warm);border-radius:4px">−</button>
+            <span style="font-weight:600;color:var(--text-dark);min-width:20px;text-align:center">${item.qty}</span>
+            <button class="qty-btn" onclick="changePantryQty('${item.id}',1)" style="background:var(--cream-warm);border-radius:4px">+</button>
+          </div>
+          <span>Alert at ${item.lowThreshold||1}</span>
+        </div>
+        <div class="inv-chips">
+          ${item.pricePaid  ?`<span class="chip price">₱${Number(item.pricePaid).toLocaleString()}</span>`:''}
+          ${item.store      ?`<span class="chip">🏪 ${item.store}</span>`:''}
+          ${item.dateBought ?`<span class="chip">📅 ${fmtDate(item.dateBought)}</span>`:''}
+        </div>
+        <div class="inv-actions">
+          <button class="btn btn-outline btn-sm" onclick="openEditPantryItem('${item.id}')">✏️ Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="removePantryItem('${item.id}')">Remove</button>
+        </div>
+      </div>`;
+    });
+  });
+  container.innerHTML=html;
+}
+
+// ==================== SHARED MUTATIONS ====================
+function toggleCheck(list, id){
+  const arr=list==='shop'?state.shopItems:state.householdItems;
+  const item=arr.find(i=>i.id===id); if(!item) return;
+  item.checked=!item.checked; saveState();
+  list==='shop'?renderShop():renderHH();
+}
+
+function changeQty(list, id, delta){
+  const arr=list==='shop'?state.shopItems:state.householdItems;
+  const item=arr.find(i=>i.id===id); if(!item) return;
+  item.qty=Math.max(1,item.qty+delta); saveState();
+  list==='shop'?renderShop():renderHH();
+}
+
+function toggleLowFlag(id){
+  const item=state.shopItems.find(i=>i.id===id); if(!item) return;
+  item.lowFlag=!item.lowFlag; saveState(); renderShop();
+}
+
+function updateNote(list, id, val){
+  const arr=list==='shop'?state.shopItems:state.householdItems;
+  const item=arr.find(i=>i.id===id); if(item){item.note=val;saveState();}
+}
+
+function uncheckAll(list){
+  if(list==='shop') state.shopItems.forEach(i=>i.checked=false);
+  else state.householdItems.forEach(i=>i.checked=false);
+  saveState(); list==='shop'?renderShop():renderHH();
+}
+
+function removeShopItem(id){
+  state.shopItems=state.shopItems.filter(i=>i.id!==id);
+  state.masterShop=state.masterShop.filter(i=>i.id!==id);
+  saveState(); renderShop();
+}
+
+function removeHHItem(id){
+  state.householdItems=state.householdItems.filter(i=>i.id!==id);
+  state.masterHH=state.masterHH.filter(i=>i.id!==id);
+  saveState(); renderHH();
+}
+
+function changePantryQty(id, delta){
+  const item=state.pantryItems.find(i=>i.id===id); if(!item) return;
+  item.qty=Math.max(0,item.qty+delta); saveState(); renderPantry(); autoAddFromPantry();
+}
+
+function removePantryItem(id){
+  if(!confirm('Remove this item from pantry?')) return;
+  state.pantryItems=state.pantryItems.filter(i=>i.id!==id);
+  saveState(); renderPantry(); autoAddFromPantry();
+}
+
+// ==================== SHOP MODAL ====================
+function openAddShopItem(){
+  editShopId=null;
+  document.getElementById('shopModalTitle').textContent='Add to Shopping List';
+  document.getElementById('shopModalBtn').textContent='Add Item';
+  document.getElementById('sName').value='';
+  document.getElementById('sPrice').value='';
+  document.getElementById('sBrand').value='';
+  document.getElementById('sCat').value='Proteins';
+  document.getElementById('shopModal').classList.add('show');
+}
+
+function openEditShopItem(id){
+  const item=state.shopItems.find(i=>i.id===id); if(!item) return;
+  editShopId=id;
+  document.getElementById('shopModalTitle').textContent='Edit Item';
+  document.getElementById('shopModalBtn').textContent='Save Changes';
+  document.getElementById('sName').value=item.name;
+  document.getElementById('sCat').value=item.cat;
+  document.getElementById('sPrice').value=item.price;
+  document.getElementById('sBrand').value=item.brand||'';
+  document.getElementById('shopModal').classList.add('show');
+}
+
+function saveShopItem(){
+  const name=document.getElementById('sName').value.trim(); if(!name) return alert('Enter item name.');
+  const d={name, cat:document.getElementById('sCat').value, price:parseFloat(document.getElementById('sPrice').value)||0, brand:document.getElementById('sBrand').value};
+  if(editShopId){
+    const item=state.shopItems.find(i=>i.id===editShopId); if(item) Object.assign(item,d);
+    const m=state.masterShop.find(i=>i.id===editShopId); if(m) Object.assign(m,d);
+  } else {
+    const n={id:'c'+Date.now(),qty:1,note:'',checked:false,lowFlag:false,autoAdded:false,...d};
+    state.shopItems.push(n); state.masterShop.push(deepCopy(n));
+  }
+  saveState(); renderShop(); closeModal('shopModal');
+}
+
+// ==================== HH MODAL ====================
+function openAddHHItem(){
+  editHHId=null;
+  document.getElementById('hhModalTitle').textContent='Add Household Item';
+  document.getElementById('hhModalBtn').textContent='Add Item';
+  document.getElementById('hName').value='';
+  document.getElementById('hPrice').value='';
+  document.getElementById('hBrand').value='';
+  document.getElementById('hCat').value='Laundry';
+  document.getElementById('hhModal').classList.add('show');
+}
+
+function openEditHHItem(id){
+  const item=state.householdItems.find(i=>i.id===id); if(!item) return;
+  editHHId=id;
+  document.getElementById('hhModalTitle').textContent='Edit Item';
+  document.getElementById('hhModalBtn').textContent='Save Changes';
+  document.getElementById('hName').value=item.name;
+  document.getElementById('hCat').value=item.cat;
+  document.getElementById('hPrice').value=item.price;
+  document.getElementById('hBrand').value=item.brand||'';
+  document.getElementById('hhModal').classList.add('show');
+}
+
+function saveHHItem(){
+  const name=document.getElementById('hName').value.trim(); if(!name) return alert('Enter item name.');
+  const d={name, cat:document.getElementById('hCat').value, price:parseFloat(document.getElementById('hPrice').value)||0, brand:document.getElementById('hBrand').value};
+  if(editHHId){
+    const item=state.householdItems.find(i=>i.id===editHHId); if(item) Object.assign(item,d);
+    const m=state.masterHH.find(i=>i.id===editHHId); if(m) Object.assign(m,d);
+  } else {
+    const n={id:'ch'+Date.now(),qty:1,note:'',checked:false,lowFlag:false,...d};
+    state.householdItems.push(n); state.masterHH.push(deepCopy(n));
+  }
+  saveState(); renderHH(); closeModal('hhModal');
+}
+
+// ==================== PANTRY MODAL ====================
+function clearPantryForm(){
+  ['pName','pBrand','pSize','pStore','pPricePaid','pQty','pLow','pDateBought','pExpiry'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('pCat').value='Pantry Staples';
+}
+
+function openAddPantryItem(){
+  editPantryId=null;
+  document.getElementById('pantryModalTitle').textContent='Add to Pantry';
+  document.getElementById('pantryModalBtn').textContent='Add to Pantry';
+  clearPantryForm();
+  document.getElementById('pDateBought').value=todayStr();
+  document.getElementById('pQty').value='1';
+  document.getElementById('pLow').value='1';
+  document.getElementById('pantryModal').classList.add('show');
+}
+
+function openEditPantryItem(id){
+  const item=state.pantryItems.find(i=>i.id===id); if(!item) return;
+  editPantryId=id;
+  document.getElementById('pantryModalTitle').textContent='Edit Pantry Item';
+  document.getElementById('pantryModalBtn').textContent='Save Changes';
+  document.getElementById('pName').value=item.name||'';
+  document.getElementById('pBrand').value=item.brand||'';
+  document.getElementById('pSize').value=item.size||'';
+  document.getElementById('pCat').value=item.cat||'Other';
+  document.getElementById('pQty').value=item.qty??'';
+  document.getElementById('pLow').value=item.lowThreshold||'';
+  document.getElementById('pDateBought').value=item.dateBought||'';
+  document.getElementById('pExpiry').value=item.expiry||'';
+  document.getElementById('pStore').value=item.store||'';
+  document.getElementById('pPricePaid').value=item.pricePaid||'';
+  document.getElementById('pantryModal').classList.add('show');
+}
+
+function savePantryItem(){
+  const name=document.getElementById('pName').value.trim(); if(!name) return alert('Enter item name.');
+  const d={
+    name,
+    brand:document.getElementById('pBrand').value,
+    size:document.getElementById('pSize').value,
+    cat:document.getElementById('pCat').value,
+    qty:parseInt(document.getElementById('pQty').value)||0,
+    lowThreshold:parseInt(document.getElementById('pLow').value)||1,
+    dateBought:document.getElementById('pDateBought').value,
+    expiry:document.getElementById('pExpiry').value,
+    store:document.getElementById('pStore').value,
+    pricePaid:parseFloat(document.getElementById('pPricePaid').value)||0,
+  };
+  if(editPantryId){
+    const item=state.pantryItems.find(i=>i.id===editPantryId); if(item) Object.assign(item,d);
+  } else {
+    state.pantryItems.push({id:'p'+Date.now(),...d});
+  }
+  saveState(); renderPantry(); autoAddFromPantry(); closeModal('pantryModal');
+}
+
+// ==================== DONE SHOPPING ====================
+function logShoppingTrip(){
+  const checked=state.shopItems.filter(i=>i.checked);
+  const total=checked.reduce((s,i)=>s+(i.price*i.qty),0);
+  if(!checked.length && !confirm('No items checked — log trip anyway?')) return;
+  state.tripHistory.push({date:new Date().toISOString(), amount:total, label:'Weekly Groceries', items:checked.map(i=>({name:i.name,qty:i.qty,price:i.price}))});
+  // Rebuild from master, carry over low flags and notes
+  const lowIds=state.shopItems.filter(i=>i.lowFlag&&!i.autoAdded).map(i=>i.id);
+  const notesMap={}; state.shopItems.forEach(i=>{if(i.note) notesMap[i.id]=i.note;});
+  state.shopItems=deepCopy(state.masterShop).map(i=>({...i, checked:false, lowFlag:lowIds.includes(i.id), note:notesMap[i.id]||''}));
+  saveState(); renderShop(); renderSummary();
+  alert('Trip logged! ₱'+total.toLocaleString()+' recorded.');
+}
+
+function logHouseholdTrip(){
+  const checked=state.householdItems.filter(i=>i.checked);
+  const total=checked.reduce((s,i)=>s+(i.price*i.qty),0);
+  state.tripHistory.push({date:new Date().toISOString(), amount:total, label:'Household Run', items:checked.map(i=>({name:i.name,qty:i.qty,price:i.price}))});
+  state.householdItems=deepCopy(state.masterHH).map(i=>({...i,checked:false}));
+  saveState(); renderHH(); renderSummary();
+  alert('Household trip logged! ₱'+total.toLocaleString()+' recorded.');
+}
+
+// ==================== SUMMARY ====================
+function renderSummary(){
+  const now=new Date(), m=now.getMonth(), y=now.getFullYear();
+  const monthTrips=state.tripHistory.filter(t=>{const d=new Date(t.date); return d.getMonth()===m&&d.getFullYear()===y;});
+  const monthTotal=monthTrips.reduce((s,t)=>s+t.amount,0);
+  const allTotal=state.tripHistory.reduce((s,t)=>s+t.amount,0);
+  const avg=monthTrips.length?Math.round(monthTotal/monthTrips.length):0;
+  document.getElementById('monthSpend').textContent='₱'+monthTotal.toLocaleString();
+  document.getElementById('tripCount').textContent=monthTrips.length;
+  document.getElementById('avgTrip').textContent='₱'+avg.toLocaleString();
+  document.getElementById('totalAllTime').textContent='₱'+allTotal.toLocaleString();
+  const hist=document.getElementById('tripHistory');
+  if(!state.tripHistory.length){hist.innerHTML='<div class="empty-state"><p>No trips logged yet.</p></div>'; return;}
+  hist.innerHTML=[...state.tripHistory].reverse().map(t=>`
+    <div class="history-item">
+      <div><div style="font-weight:500">${t.label||'Shopping Trip'}</div><div class="history-date">${fmtDate(t.date.split('T')[0])}</div></div>
+      <div class="history-amount">₱${t.amount.toLocaleString()}</div>
+    </div>`).join('');
+}
+
+function clearHistory(){ if(confirm('Clear all trip history?')){state.tripHistory=[];saveState();renderSummary();} }
+
+// ==================== EXPORT / IMPORT ====================
+function exportData(){
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='pantrytrack-'+todayStr()+'.json'; a.click();
+}
+
+function importData(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const imp=JSON.parse(ev.target.result);
+      if(!imp.shopItems&&!imp.pantryItems) return alert('Invalid backup file.');
+      if(!confirm('This replaces all current data. Continue?')) return;
+      state={...state,...imp};
+      if(!state.masterShop) state.masterShop=deepCopy(state.shopItems.filter(i=>!i.autoAdded));
+      if(!state.masterHH)   state.masterHH=deepCopy(state.householdItems);
+      saveState(); renderShop(); renderHH(); renderPantry(); renderSummary(); autoAddFromPantry();
+      alert('Data restored!');
+    }catch(err){alert('Could not read file. Make sure it is a valid PantryTrack backup.');}
+  };
+  reader.readAsText(file); e.target.value='';
+}
+
+// ==================== TABS & MODALS ====================
+function switchTab(tab){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+  if(tab==='summary')   renderSummary();
+  if(tab==='household') renderHH();
+  if(tab==='pantry')    renderPantry();
+}
+
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+
+document.querySelectorAll('.modal-overlay').forEach(o=>{
+  o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('show'); });
+});
+
+// ==================== HEADER ====================
+function initHeader(){
+  const d=new Date(), days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  document.getElementById('headerDay').textContent=days[d.getDay()];
+  document.getElementById('headerDate').textContent=fmtDate(todayStr());
+  document.getElementById('shopWeekLabel').textContent='Week of '+fmtDate(todayStr());
+  if(isFirstFriday()) document.getElementById('householdTab').innerHTML='🧺 Household <span class="tab-badge">!</span>';
+}
+
+// ==================== INIT ====================
+loadState();
+initHeader();
+autoAddFromPantry();
+renderShop();
+</script>
+</body>
+</html>
