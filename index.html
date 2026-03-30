@@ -288,7 +288,7 @@
       <div class="logo-icon">🌿</div>
       <div>
         <span class="logo-text">PantryTrack</span>
-        <span class="logo-sub">Jo's Home Manager</span>
+        <span class="logo-sub">Home Manager</span>
       </div>
     </div>
     <div class="header-date">
@@ -307,7 +307,6 @@
 
 <main class="main">
 
-  <!-- SHOP TAB -->
   <div class="tab-content active" id="tab-shop">
     <div class="alert-banner danger" id="expiryAlert">
       <button class="alert-dismiss" onclick="document.getElementById('expiryAlert').classList.remove('show')">✕</button>
@@ -339,12 +338,10 @@
       </div>
     </div>
 
-    <!-- CUSTOM SECTIONS -->
     <div id="customSectionsContainer"></div>
     <button class="btn btn-outline" style="width:100%;justify-content:center;border-style:dashed;color:var(--brown-mid);border-color:var(--brown-light);margin-bottom:16px" onclick="openAddSectionModal()">＋ Add Meal / Custom Section</button>
   </div>
 
-  <!-- HOUSEHOLD TAB -->
   <div class="tab-content" id="tab-household">
     <div class="section-card">
       <div class="section-header">
@@ -368,18 +365,14 @@
     </div>
   </div>
 
-  <!-- PANTRY TAB -->
   <div class="tab-content" id="tab-pantry">
-    <!-- Overview bar -->
     <div class="pantry-overview-bar" id="pantryOverviewBar"></div>
-    <!-- Category sections rendered here -->
     <div id="pantryMap"></div>
     <div class="action-row" style="margin-bottom:20px">
       <button class="btn btn-outline btn-sm" onclick="openAddPantryExpected()">＋ Add Expected Item</button>
     </div>
   </div>
 
-  <!-- HISTORY TAB -->
   <div class="tab-content" id="tab-history">
     <div class="summary-grid">
       <div class="summary-card"><span class="summary-value" id="monthSpend">₱0</span><div class="summary-label">This Month</div></div>
@@ -398,19 +391,12 @@
     <div class="section-card">
       <div class="section-header"><div class="section-title">📋 Trip History</div></div>
       <div id="tripHistory"></div>
-  </div>
-  <div class="action-row" style="margin-bottom: 16px;">
-  <button class="btn btn-danger btn-sm" onclick="clearHistory()">
-    Clear History
-  </button>
-</div>
-<div id="historylist">
-  </div>
+    </div>
+    <div class="action-row" style="margin-bottom: 16px;">
+      <button class="btn btn-danger btn-sm" onclick="clearHistory()">Clear History</button>
+    </div>
+  </div> <div class="tab-content" id="tab-settings">
 
-  <!-- SETTINGS TAB -->
-  <div class="tab-content" id="tab-settings">
-
-    <!-- App Preferences -->
     <div class="section-card">
       <div class="section-header"><div class="section-title">⚙️ Preferences</div></div>
       <div class="form-grid">
@@ -425,7 +411,6 @@
       </div>
     </div>
 
-    <!-- Pantry Categories -->
     <div class="section-card">
       <div class="section-header"><div class="section-title">📦 Pantry Categories</div></div>
       <p style="font-size:12px;color:var(--text-soft);margin-bottom:12px;line-height:1.6">Add or remove pantry categories. Removing a category hides it from the Pantry map but does not delete items already logged under it.</p>
@@ -436,7 +421,6 @@
       </div>
     </div>
 
-    <!-- Shop List Defaults -->
     <div class="section-card">
       <div class="section-header"><div class="section-title">🛒 Shop List Defaults</div></div>
       <p style="font-size:12px;color:var(--text-soft);margin-bottom:12px;line-height:1.6">These are your recurring grocery items. Edits here update what gets restored after every "Done Shopping" reset.</p>
@@ -446,10 +430,17 @@
       </div>
     </div>
 
-    <!-- Backup & Restore -->
     <div class="section-card">
-      <div class="section-header"><div class="section-title">💾 Backup & Restore</div></div>
-      <p style="font-size:12px;color:var(--text-soft);margin-bottom:12px;line-height:1.6">Export your data as a JSON file. Re-import on any device or after a cache clear to restore everything.</p>
+      <div class="section-header"><div class="section-title">📊 Export to Spreadsheet</div></div>
+      <p style="font-size:12px;color:var(--text-soft);margin-bottom:12px;line-height:1.6">Download your shopping and household trips as a CSV file to easily copy and paste into your expense tracking sheet.</p>
+      <div class="action-row" style="margin-top:0">
+        <button class="btn btn-outline btn-sm" onclick="exportCSV()">⬇ Export History to CSV</button>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-header"><div class="section-title">💾 Backup & Restore (JSON)</div></div>
+      <p style="font-size:12px;color:var(--text-soft);margin-bottom:12px;line-height:1.6">Export your full app data as a JSON file. Re-import on any device or after a cache clear to restore everything.</p>
       <div class="action-row" style="margin-top:0">
         <button class="btn btn-outline btn-sm" onclick="exportData()">⬇ Export JSON</button>
         <button class="btn btn-outline btn-sm" onclick="document.getElementById('importFile').click()">⬆ Import JSON</button>
@@ -461,7 +452,6 @@
 
 </main>
 
-<!-- SHOP ITEM MODAL -->
 <div class="modal-overlay" id="shopModal">
   <div class="modal">
     <div class="modal-header">
@@ -485,7 +475,6 @@
   </div>
 </div>
 
-<!-- HOUSEHOLD ITEM MODAL -->
 <div class="modal-overlay" id="hhModal">
   <div class="modal">
     <div class="modal-header">
@@ -509,7 +498,6 @@
   </div>
 </div>
 
-<!-- PANTRY ITEM MODAL -->
 <div class="modal-overlay" id="pantryModal">
   <div class="modal">
     <div class="modal-header">
@@ -517,7 +505,6 @@
       <button class="modal-close" onclick="closeModal('pantryModal')">✕</button>
     </div>
     <div class="form-grid">
-      <!-- Basic -->
       <div class="form-field full"><label class="form-label">Item Name *</label><input class="form-input" id="pName" placeholder="e.g. Soy Sauce"></div>
       <div class="form-field"><label class="form-label">Brand</label><input class="form-input" id="pBrand" placeholder="e.g. Silver Swan"></div>
       <div class="form-field"><label class="form-label">Size / Unit</label><input class="form-input" id="pSize" placeholder="e.g. 500ml"></div>
@@ -530,11 +517,9 @@
       </div>
       <div class="form-field"><label class="form-label">Quantity on Hand</label><input class="form-input" type="number" id="pQty" placeholder="1" min="0"></div>
       <div class="form-field"><label class="form-label">Low Stock Alert At</label><input class="form-input" type="number" id="pLow" placeholder="1" min="0"></div>
-      <!-- Dates -->
       <div class="form-section-divider">📅 Dates</div>
       <div class="form-field"><label class="form-label">Date Purchased</label><input class="form-input" type="date" id="pDateBought"></div>
       <div class="form-field"><label class="form-label">Expiry Date</label><input class="form-input" type="date" id="pExpiry"></div>
-      <!-- Purchase details -->
       <div class="form-section-divider">🛒 Purchase Details</div>
       <div class="form-field"><label class="form-label">Store</label><input class="form-input" id="pStore" placeholder="e.g. SM Savemore"></div>
       <div class="form-field"><label class="form-label">Price Paid (₱)</label><input class="form-input" type="number" id="pPricePaid" placeholder="0" min="0"></div>
@@ -546,7 +531,6 @@
   </div>
 </div>
 
-<!-- ADD SECTION MODAL -->
 <div class="modal-overlay" id="addSectionModal">
   <div class="modal">
     <div class="modal-header">
@@ -578,7 +562,6 @@
   </div>
 </div>
 
-<!-- ADD ITEM TO SECTION MODAL -->
 <div class="modal-overlay" id="sectionItemModal">
   <div class="modal">
     <div class="modal-header">
@@ -720,9 +703,6 @@ function nextFirstFriday(){ const d=new Date(); d.setDate(1); d.setMonth(d.getMo
 function autoAddFromPantry(){
   state.shopItems = state.shopItems.filter(i=>!i.autoAdded);
 
-  // Optional suppression used when clearing history:
-  // remove existing auto-added reminders and hide alert banners,
-  // but do not re-add new ones based on current pantry status.
   if(state.suppressAutoReminders){
     const ea=document.getElementById('expiryAlert'), la=document.getElementById('lowAlert');
     ea.classList.remove('show');
@@ -768,7 +748,6 @@ function autoAddFromPantry(){
     }
   });
 
-  // Reset alerts so stale reminders don't remain after clearing history
   const ea=document.getElementById('expiryAlert'), la=document.getElementById('lowAlert');
   ea.classList.remove('show');
   la.classList.remove('show');
@@ -949,7 +928,6 @@ const PANTRY_CAT_ICONS = {
 let pantryExpandedCats = new Set();
 
 function initPantryMaster(){
-  // Ensure state has pantryMaster (expected items list per category)
   if(!state.pantryMaster){
     state.pantryMaster = {};
     Object.entries(PANTRY_MASTER).forEach(([cat, items])=>{
@@ -963,114 +941,16 @@ function initPantryMaster(){
   }
 }
 
-function renderPantry(){
-  initPantryMaster();
-  const overviewBar = document.getElementById('pantryOverviewBar');
-  const mapContainer = document.getElementById('pantryMap');
-  const cats = Object.keys(state.pantryMaster);
-
-  // Build overview bar
-  overviewBar.innerHTML = cats.map(cat=>{
-    const expected = state.pantryMaster[cat].length;
-    const stocked  = state.pantryMaster[cat].filter(ei=>getPantryItem(ei.id)).length;
-    const pct = expected ? stocked/expected : 0;
-    const cls = pct===1 ? 'full' : pct < 0.4 ? 'empty' : 'low';
-    return `<div class="pantry-score-chip ${cls}" onclick="scrollToCat('${cat}')">
-      <span class="psc-fraction">${stocked}/${expected}</span>
-      <div class="psc-label">${PANTRY_CAT_ICONS[cat]||'📦'} ${cat.split(' ')[0]}</div>
-    </div>`;
-  }).join('');
-
-  // Build category blocks
-  mapContainer.innerHTML = cats.map(cat=>{
-    const expectedItems = state.pantryMaster[cat];
-    const stocked  = expectedItems.filter(ei=>getPantryItem(ei.id)).length;
-    const pct = expectedItems.length ? stocked/expectedItems.length : 0;
-    const isExpanded = pantryExpandedCats.has(cat);
-    const barCls = pct>=0.7?'':'pct<0.4?\'danger\':\'warn\'';
-    const fillCls = pct >= 0.7 ? '' : pct < 0.4 ? 'danger' : 'warn';
-    const fillPct = Math.round(pct*100);
-
-    const cardsHtml = expectedItems.map(ei=>{
-      const item = getPantryItem(ei.id);
-      if(item){
-        // STOCKED CARD
-        const days = daysToExpiry(item.expiry);
-        let expiryHtml = '';
-        if(days!==null){
-          const cls = days<0?'crit':days<=3?'crit':days<=7?'soon':'ok';
-          const txt = days<0?'Expired':'Exp '+fmtDate(item.expiry);
-          expiryHtml = `<div class="pc-expiry ${cls}">${txt}</div>`;
-        }
-        const isLow = typeof item.qty==='number' && item.qty<=(item.lowThreshold||1);
-        const cardCls = isLow?'low-stock':days!==null&&days<=7?'expiring':'';
-        if(isExpanded){
-          return `<div class="pantry-card ${cardCls}" onclick="openEditPantryItem('${item.id}')">
-            <div class="pc-main">
-              <div class="pc-name">${item.name}</div>
-              <div class="pc-brand">${[item.brand,item.size].filter(Boolean).join(' · ')||ei.defaultBrand||'—'}</div>
-              ${expiryHtml}
-              ${item.store?`<div class="pc-brand" style="margin-top:2px">🏪 ${item.store}</div>`:''}
-              ${item.pricePaid?`<div class="pc-brand">₱${Number(item.pricePaid).toLocaleString()}</div>`:''}
-            </div>
-            <div class="pc-right">
-              <div class="pc-qty">×${item.qty}</div>
-              <button class="qty-btn" onclick="event.stopPropagation();changePantryQty('${item.id}',-1)" style="background:var(--cream-warm);border-radius:4px;width:24px;height:24px">−</button>
-              <button class="qty-btn" onclick="event.stopPropagation();changePantryQty('${item.id}',1)" style="background:var(--cream-warm);border-radius:4px;width:24px;height:24px">+</button>
-              <button class="low-flag-btn" onclick="event.stopPropagation();removePantryItem('${item.id}')" style="color:var(--danger);font-size:11px">✕</button>
-            </div>
-          </div>`;
-        } else {
-          return `<div class="pantry-card ${cardCls}" onclick="openEditPantryItem('${item.id}')">
-            <div class="pc-name">${item.name}</div>
-            <div class="pc-brand">${item.brand||item.size||ei.defaultBrand||''}</div>
-            <div class="pc-qty">×${item.qty}</div>
-            ${expiryHtml}
-          </div>`;
-        }
-      } else {
-        // MISSING CARD
-        return `<div class="pantry-card missing" onclick="openAddFromExpected('${ei.id}','${cat}')">
-          <div class="pc-missing-name">${ei.name}</div>
-          ${ei.defaultBrand?`<div class="pc-brand" style="font-size:10px">${ei.defaultBrand}</div>`:''}
-          <div class="pc-missing-cta">+ Add to pantry</div>
-        </div>`;
-      }
-    }).join('');
-
-    return `<div class="pantry-cat-block" id="pantrycat_${cat.replace(/\W/g,'')}">
-      <div class="pantry-cat-header" onclick="togglePantryCat('${cat}')">
-        <div class="pantry-cat-title">${PANTRY_CAT_ICONS[cat]||'📦'} ${cat}</div>
-        <div class="pantry-cat-score">
-          <div class="score-bar-wrap"><div class="score-bar-fill ${fillCls}" style="width:${fillPct}%"></div></div>
-          <span class="score-text">${stocked}/${expectedItems.length}</span>
-          <span class="cat-expand-arrow ${isExpanded?'open':''}">▼</span>
-        </div>
-      </div>
-      <div class="pantry-grid ${isExpanded?'expanded':''}" id="pantryGrid_${cat.replace(/\W/g,'')}">${cardsHtml}</div>
-      <div style="padding:0 14px 10px;display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn btn-outline btn-sm" onclick="openAddExpectedToCat('${cat}')">＋ Add Expected Item</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
 function getEntriesForSlot(expectedId){
   return (state.pantryEntries||[]).filter(e=>e.expectedId===expectedId);
 }
 
-// kept for backward compat — returns first entry for a slot
-function getPantryItem(expectedId){
-  return (state.pantryEntries||[]).find(e=>e.expectedId===expectedId);
-}
-
 function renderPantry(){
   initPantryMaster();
   const overviewBar = document.getElementById('pantryOverviewBar');
   const mapContainer = document.getElementById('pantryMap');
   const cats = Object.keys(state.pantryMaster);
 
-  // Build overview bar
   overviewBar.innerHTML = cats.map(cat=>{
     const expected = state.pantryMaster[cat].length;
     const stocked  = state.pantryMaster[cat].filter(ei=>getEntriesForSlot(ei.id).length>0).length;
@@ -1087,13 +967,12 @@ function renderPantry(){
     const stocked  = expectedItems.filter(ei=>getEntriesForSlot(ei.id).length>0).length;
     const pct = expectedItems.length ? stocked/expectedItems.length : 0;
     const isExpanded = pantryExpandedCats.has(cat);
-    const fillCls = pct>=0.7?'':pct<0.4?'danger':'warn';
+    const fillCls = pct>=0.7 ? '' : pct<0.4 ? 'danger' : 'warn';
     const fillPct = Math.round(pct*100);
 
     const cardsHtml = expectedItems.map(ei=>{
       const entries = getEntriesForSlot(ei.id);
       if(entries.length===0){
-        // MISSING SLOT
         return `<div class="pantry-card missing" onclick="openAddFromExpected('${ei.id}','${cat}')">
           <div class="pc-missing-name">${ei.name}</div>
           ${ei.defaultBrand?`<div class="pc-brand" style="font-size:10px">${ei.defaultBrand}</div>`:''}
@@ -1101,7 +980,6 @@ function renderPantry(){
         </div>`;
       }
 
-      // STOCKED SLOT — one or more entries
       const totalQty = entries.reduce((s,e)=>s+(e.qty||0),0);
       const lowThreshold = entries[0].lowThreshold||1;
       const isLow = totalQty <= lowThreshold;
@@ -1109,7 +987,6 @@ function renderPantry(){
       const cardCls = isLow?'low-stock':anyExpiring?'expiring':'';
 
       if(isExpanded){
-        // EXPANDED: full list rows
         const entriesHtml = entries.map(entry=>{
           const days = daysToExpiry(entry.expiry);
           let expiryHtml='';
@@ -1139,7 +1016,6 @@ function renderPantry(){
           <button class="btn btn-outline btn-sm" style="width:100%;margin-top:8px;font-size:11px" onclick="openAddFromExpected('${ei.id}','${cat}')">+ Add Brand</button>
         </div>`;
       } else {
-        // COMPACT GRID CARD
         const brandList = entries.map(e=>e.brand||e.size||'—').join(', ');
         const minExpiry = entries.reduce((min,e)=>{ const d=daysToExpiry(e.expiry); return (d!==null&&(min===null||d<min))?d:min; }, null);
         let expiryHtml='';
@@ -1211,7 +1087,6 @@ function openAddExpectedToCat(cat){
 
 function openAddPantryExpected(){ openAddPantryItem(); }
 
-
 // ==================== SHARED MUTATIONS ====================
 function toggleCheck(list, id){
   const arr=list==='shop'?state.shopItems:state.householdItems;
@@ -1260,7 +1135,6 @@ function changePantryEntryQty(id, delta){
   entry.qty=Math.max(0,entry.qty+delta); saveState(); renderPantry(); autoAddFromPantry();
 }
 
-// keep old name working too
 function changePantryQty(id, delta){ changePantryEntryQty(id, delta); }
 
 function removePantryEntry(id){
@@ -1381,7 +1255,6 @@ function openEditPantryEntry(id){
   document.getElementById('pantryModal').classList.add('show');
 }
 
-// keep old name working
 function openEditPantryItem(id){ openEditPantryEntry(id); }
 
 function savePantryItem(){
@@ -1400,16 +1273,13 @@ function savePantryItem(){
     pricePaid:parseFloat(document.getElementById('pPricePaid').value)||0,
   };
   if(editPantryId){
-    // Editing existing entry
     const entry=(state.pantryEntries||[]).find(e=>e.id===editPantryId);
     if(entry) Object.assign(entry,d);
     toast('✓ Entry updated');
   } else {
-    // New entry
     if(!state.pantryEntries) state.pantryEntries=[];
     const newEntry={id:'pe_'+Date.now(), expectedId, ...d};
     state.pantryEntries.push(newEntry);
-    // Auto-flag on shop list if from a missing slot
     if(expectedId){
       const alreadyInShop=state.shopItems.some(i=>i.pantryExpectedId===expectedId);
       if(!alreadyInShop){
@@ -1422,32 +1292,77 @@ function savePantryItem(){
   saveState(); renderPantry(); autoAddFromPantry(); closeModal('pantryModal');
 }
 
-// ==================== DONE SHOPPING ====================
+// ==================== DONE SHOPPING SYNC LOGIC ====================
+function syncToPantry(checkedItems) {
+  checkedItems.forEach(item => {
+    // 1. Try mapping via direct ID
+    let existingEntry = null;
+    if (item.pantryExpectedId) {
+      existingEntry = (state.pantryEntries || []).find(e => e.expectedId === item.pantryExpectedId && (e.brand || '') === (item.brand || ''));
+    }
+    // 2. Try exact name & brand match
+    if (!existingEntry) {
+      existingEntry = (state.pantryEntries || []).find(e => e.name.toLowerCase() === item.name.toLowerCase() && (e.brand || '') === (item.brand || ''));
+    }
+
+    if (existingEntry) {
+      existingEntry.qty += item.qty;
+      existingEntry.dateBought = todayStr();
+      existingEntry.pricePaid = item.price || existingEntry.pricePaid;
+    } else {
+      if (!state.pantryEntries) state.pantryEntries = [];
+      state.pantryEntries.push({
+        id: 'pe_' + Date.now() + Math.random().toString(36).substr(2, 5),
+        expectedId: item.pantryExpectedId || null,
+        name: item.name,
+        brand: item.brand || '',
+        size: '',
+        cat: item.cat || 'Other',
+        qty: item.qty,
+        lowThreshold: (state.prefs && state.prefs.defaultLowStock) || 1,
+        dateBought: todayStr(),
+        expiry: '',
+        store: '',
+        pricePaid: item.price || 0
+      });
+    }
+  });
+}
+
 function logShoppingTrip(){
   const checked=state.shopItems.filter(i=>i.checked);
   const secChecked=(state.customSections||[]).flatMap(s=>s.items.filter(i=>i.checked).map(i=>({...i,section:s.name})));
   const allChecked=[...checked, ...secChecked];
   const total=allChecked.reduce((s,i)=>s+(i.price*i.qty),0);
   if(!allChecked.length && !confirm('No items checked — log trip anyway?')) return;
+  
   state.tripHistory.push({date:new Date().toISOString(), amount:total, label:'Weekly Groceries', items:allChecked.map(i=>({name:i.name,qty:i.qty,price:i.price,section:i.section||null}))});
-  // Rebuild shop from master
+  
+  // Sync purchased items to Pantry
+  syncToPantry(allChecked);
+
   const lowIds=state.shopItems.filter(i=>i.lowFlag&&!i.autoAdded).map(i=>i.id);
   const notesMap={}; state.shopItems.forEach(i=>{if(i.note) notesMap[i.id]=i.note;});
   state.shopItems=deepCopy(state.masterShop).map(i=>({...i, checked:false, lowFlag:lowIds.includes(i.id), note:notesMap[i.id]||''}));
-  // Handle custom sections: remove one-off, uncheck weekly
   state.customSections=(state.customSections||[]).filter(s=>s.persist==='weekly');
   state.customSections.forEach(s=>s.items.forEach(i=>i.checked=false));
-  saveState(); renderShop(); renderHistory();
-  toast('✓ Trip logged — ₱'+total.toLocaleString()+' recorded');
+  
+  saveState(); renderShop(); renderPantry(); renderHistory();
+  toast('✓ Trip logged and pantry updated — ₱'+total.toLocaleString());
 }
 
 function logHouseholdTrip(){
   const checked=state.householdItems.filter(i=>i.checked);
   const total=checked.reduce((s,i)=>s+(i.price*i.qty),0);
+  
   state.tripHistory.push({date:new Date().toISOString(), amount:total, label:'Household Run', items:checked.map(i=>({name:i.name,qty:i.qty,price:i.price}))});
+  
+  // Sync purchased household items to Pantry
+  syncToPantry(checked);
+
   state.householdItems=deepCopy(state.masterHH).map(i=>({...i,checked:false}));
-  saveState(); renderHH(); renderHistory();
-  toast('✓ Household trip logged — ₱'+total.toLocaleString()+' recorded');
+  saveState(); renderHH(); renderPantry(); renderHistory();
+  toast('✓ Household trip logged and pantry updated — ₱'+total.toLocaleString());
 }
 
 // ==================== HISTORY ====================
@@ -1462,7 +1377,6 @@ function renderHistory(){
   document.getElementById('avgTrip').textContent='₱'+avg.toLocaleString();
   document.getElementById('totalAllTime').textContent='₱'+allTotal.toLocaleString();
 
-  // Trip history list
   const hist=document.getElementById('tripHistory');
   if(!state.tripHistory.length){hist.innerHTML='<div class="empty-state"><p>No trips logged yet.</p></div>';}
   else {
@@ -1472,8 +1386,6 @@ function renderHistory(){
         <div class="history-amount">₱${t.amount.toLocaleString()}</div>
       </div>`).join('');
   }
-
-  // Price history
   renderPriceHistory();
 }
 
@@ -1481,10 +1393,7 @@ function renderPriceHistory(){
   const query=(document.getElementById('priceSearchInput')?.value||'').toLowerCase().trim();
   const container=document.getElementById('priceHistoryList');
 
-  // Collect all entries with price + store data
   const records=(state.pantryEntries||[]).filter(e=>e.pricePaid && e.store);
-
-  // Group by item name (normalized)
   const grouped={};
   records.forEach(item=>{
     const key=item.name.toLowerCase().trim();
@@ -1492,8 +1401,6 @@ function renderPriceHistory(){
     grouped[key].entries.push({store:item.store, price:Number(item.pricePaid), date:item.dateBought||item.id, brand:item.brand||''});
   });
 
-  // Also pull from trip history items that have store data (future-proof)
-  // Filter by search
   let keys=Object.keys(grouped);
   if(query) keys=keys.filter(k=>k.includes(query)||grouped[k].name.toLowerCase().includes(query));
 
@@ -1522,62 +1429,34 @@ function renderPriceHistory(){
 
 function clearHistory() {
   const confirmed = confirm("Are you sure you want to delete all shopping and price history? This cannot be undone.");
-  
   if(!confirmed) return;
 
-  // "Start from scratch" reset:
-  // reset EVERYTHING used by Shop/HH/Pantry/History + what Settings depends on.
   state.shopItems = deepCopy(DEFAULT_SHOP);
   state.householdItems = deepCopy(DEFAULT_HH);
   state.pantryItems = [];
   state.pantryEntries = [];
   state.tripHistory = [];
-
   state.masterShop = deepCopy(DEFAULT_SHOP);
   state.masterHH = deepCopy(DEFAULT_HH);
-
   state.customSections = [];
-  state.pantryMaster = null; // will be re-created by initPantryMaster()
+  state.pantryMaster = null; 
   state.prefs = {expiryWarnDays:7, defaultLowStock:1};
-
-  // Clear any helper flags used during UI refreshes.
   delete state.suppressAutoReminders;
 
   saveState();
 
-  // Hide alert banners
   const ea=document.getElementById('expiryAlert'), la=document.getElementById('lowAlert');
-  if(ea){
-    ea.classList.remove('show');
-    document.getElementById('expiryAlertItems').innerHTML='';
-  }
-  if(la){
-    la.classList.remove('show');
-    document.getElementById('lowAlertItems').innerHTML='';
-  }
+  if(ea){ ea.classList.remove('show'); document.getElementById('expiryAlertItems').innerHTML=''; }
+  if(la){ la.classList.remove('show'); document.getElementById('lowAlertItems').innerHTML=''; }
 
-  // Re-init derived data + re-render
   initPantryMaster();
   autoAddFromPantry();
 
-  // Post-cleanup: guarantee Shop reminders are cleared after reset
   state.shopItems = (state.shopItems||[]).filter(i=>!i.autoAdded);
-  const ea2=document.getElementById('expiryAlert'), la2=document.getElementById('lowAlert');
-  if(ea2){
-    ea2.classList.remove('show');
-    document.getElementById('expiryAlertItems').innerHTML='';
-  }
-  if(la2){
-    la2.classList.remove('show');
-    document.getElementById('lowAlertItems').innerHTML='';
-  }
+  if(ea){ ea.classList.remove('show'); document.getElementById('expiryAlertItems').innerHTML=''; }
+  if(la){ la.classList.remove('show'); document.getElementById('lowAlertItems').innerHTML=''; }
 
-  renderShop();
-  renderHH();
-  renderPantry();
-  renderHistory();
-  renderSettings();
-
+  renderShop(); renderHH(); renderPantry(); renderHistory(); renderSettings();
   toast('✓ Reset complete. Starting from scratch.');
 }
 
@@ -1588,7 +1467,6 @@ function renderSettings(){
   renderMasterShopSettings();
 }
 
-// ---- PREFS ----
 function renderPrefs(){
   const prefs=state.prefs||{};
   document.getElementById('prefExpiryDays').value=prefs.expiryWarnDays||7;
@@ -1603,7 +1481,6 @@ function savePrefs(){
   toast('✓ Preferences saved');
 }
 
-// ---- PANTRY CATEGORIES ----
 function renderPantryCatSettings(){
   const container=document.getElementById('pantryCatList');
   const cats=Object.keys(state.pantryMaster||{});
@@ -1641,7 +1518,6 @@ function removePantryCategory(cat){
   toast('✓ Category removed');
 }
 
-// ---- MASTER SHOP DEFAULTS ----
 function renderMasterShopSettings(){
   const container=document.getElementById('masterShopList');
   if(!state.masterShop||!state.masterShop.length){container.innerHTML='<div class="empty-state"><p>No default items.</p></div>'; return;}
@@ -1658,13 +1534,8 @@ function renderMasterShopSettings(){
     </div>`).join('');
 }
 
-function openAddShopDefault(){
-  openAddShopItem(); // reuse existing modal — new items go to both live list and master
-}
-
-function openEditShopDefault(id){
-  openEditShopItem(id);
-}
+function openAddShopDefault(){ openAddShopItem(); }
+function openEditShopDefault(id){ openEditShopItem(id); }
 
 function removeShopDefault(id){
   if(!confirm('Remove this item from your default shop list?')) return;
@@ -1673,8 +1544,6 @@ function removeShopDefault(id){
   saveState(); renderMasterShopSettings(); renderShop();
   toast('✓ Removed from default list');
 }
-
-
 
 // ==================== EXPORT / IMPORT ====================
 function exportData(){
@@ -1701,6 +1570,27 @@ function importData(e){
   reader.readAsText(file); e.target.value='';
 }
 
+function exportCSV() {
+  if (!state.tripHistory || state.tripHistory.length === 0) {
+    return toast('⚠️ No trip history to export');
+  }
+  let csv = 'Date,Trip Type,Total Amount,Items Logged\n';
+  state.tripHistory.forEach(t => {
+    const d = t.date.split('T')[0];
+    const label = t.label || 'Shopping Trip';
+    const amount = t.amount;
+    const items = t.items ? t.items.map(i => `${i.qty}x ${i.name}`).join('; ') : '';
+    csv += `"${d}","${label}","${amount}","${items}"\n`;
+  });
+  
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'PantryTrack_Expenses_' + todayStr() + '.csv';
+  a.click();
+  toast('✓ CSV Exported');
+}
+
 // ==================== TABS & MODALS ====================
 function switchTab(tab){
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
@@ -1709,7 +1599,6 @@ function switchTab(tab){
   const contentEl = document.getElementById('tab-'+tab);
   if(contentEl) contentEl.classList.add('active');
 
-  // Robustly activate the corresponding button (avoids CSS attribute selector quirks)
   const btn = [...document.querySelectorAll('.tab')].find(b=>{
     const oc = b.getAttribute('onclick') || '';
     return oc.includes(`switchTab('${tab}')`);
@@ -1752,11 +1641,8 @@ const DISH_TEMPLATES = {
 let activeSectionId = null;
 let editSectionItemId = null;
 
-function initSections(){
-  if(!state.customSections) state.customSections = [];
-}
+function initSections(){ if(!state.customSections) state.customSections = []; }
 
-// ---- RENDER ALL CUSTOM SECTIONS ----
 function renderCustomSections(){
   const container = document.getElementById('customSectionsContainer');
   if(!state.customSections || !state.customSections.length){ container.innerHTML=''; return; }
@@ -1803,7 +1689,6 @@ function renderCustomSections(){
   updateShopTotal();
 }
 
-// ---- SECTION TOTAL (includes custom sections) ----
 function updateShopTotal(){
   const shopAll  = state.shopItems.reduce((s,i)=>s+(i.price*i.qty),0);
   const shopRem  = state.shopItems.filter(i=>!i.checked).reduce((s,i)=>s+(i.price*i.qty),0);
@@ -1815,11 +1700,9 @@ function updateShopTotal(){
   document.getElementById('shopTotalSub').textContent = grandAll!==grandRem ? `Full list: ₱${grandAll.toLocaleString()}` : '';
 }
 
-// ---- OPEN ADD SECTION MODAL ----
 function openAddSectionModal(){
   document.getElementById('secName').value='';
   document.getElementById('secPersist').value='oneoff';
-  // Render template pills
   const grid = document.getElementById('templateGrid');
   grid.innerHTML = Object.keys(DISH_TEMPLATES).map(name=>
     `<button class="template-pill" onclick="selectTemplate('${name}',this)">${name}</button>`
@@ -1856,7 +1739,6 @@ function createSection(){
   toast(`✓ "${name}" section added${templateItems.length?' with '+templateItems.length+' items':''}`);
 }
 
-// ---- ADD ITEM TO SECTION ----
 function openAddSectionItemModal(secId){
   activeSectionId = secId;
   editSectionItemId = null;
@@ -1883,7 +1765,6 @@ function saveSectionItem(){
   saveState(); renderCustomSections(); closeModal('sectionItemModal');
 }
 
-// ---- SECTION ITEM ACTIONS ----
 function toggleSectionItem(secId, itemId){
   const sec=state.customSections.find(s=>s.id===secId); if(!sec) return;
   const item=sec.items.find(i=>i.id===itemId); if(!item) return;
