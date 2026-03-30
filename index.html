@@ -1559,6 +1559,19 @@ function clearHistory() {
   // Re-init derived data + re-render
   initPantryMaster();
   autoAddFromPantry();
+
+  // Post-cleanup: guarantee Shop reminders are cleared after reset
+  state.shopItems = (state.shopItems||[]).filter(i=>!i.autoAdded);
+  const ea2=document.getElementById('expiryAlert'), la2=document.getElementById('lowAlert');
+  if(ea2){
+    ea2.classList.remove('show');
+    document.getElementById('expiryAlertItems').innerHTML='';
+  }
+  if(la2){
+    la2.classList.remove('show');
+    document.getElementById('lowAlertItems').innerHTML='';
+  }
+
   renderShop();
   renderHH();
   renderPantry();
