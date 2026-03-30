@@ -719,6 +719,20 @@ function nextFirstFriday(){ const d=new Date(); d.setDate(1); d.setMonth(d.getMo
 // ==================== AUTO-ADD ====================
 function autoAddFromPantry(){
   state.shopItems = state.shopItems.filter(i=>!i.autoAdded);
+
+  // Optional suppression used when clearing history:
+  // remove existing auto-added reminders and hide alert banners,
+  // but do not re-add new ones based on current pantry status.
+  if(state.suppressAutoReminders){
+    const ea=document.getElementById('expiryAlert'), la=document.getElementById('lowAlert');
+    ea.classList.remove('show');
+    la.classList.remove('show');
+    document.getElementById('expiryAlertItems').innerHTML='';
+    document.getElementById('lowAlertItems').innerHTML='';
+    saveState();
+    return;
+  }
+
   const expiring=[], low=[];
   const warnDays = (state.prefs&&state.prefs.expiryWarnDays)||7;
 
@@ -1511,27 +1525,47 @@ function clearHistory() {
   
   if(!confirmed) return;
 
-  // Clear trip logs (used by the History tab summary + trip history list)
+  // "Start from scratch" reset:
+  // reset EVERYTHING used by Shop/HH/Pantry/History + what Settings depends on.
+  state.shopItems = deepCopy(DEFAULT_SHOP);
+  state.householdItems = deepCopy(DEFAULT_HH);
+  state.pantryItems = [];
+  state.pantryEntries = [];
   state.tripHistory = [];
 
-  // Clear price-related fields on pantry entries (used by Price History list)
-  (state.pantryEntries||[]).forEach(e=>{
-    e.store = '';
-    e.pricePaid = 0;
-    e.dateBought = '';
-  });
+  state.masterShop = deepCopy(DEFAULT_SHOP);
+  state.masterHH = deepCopy(DEFAULT_HH);
+
+  state.customSections = [];
+  state.pantryMaster = null; // will be re-created by initPantryMaster()
+  state.prefs = {expiryWarnDays:7, defaultLowStock:1};
+
+  // Clear any helper flags used during UI refreshes.
+  delete state.suppressAutoReminders;
 
   saveState();
 
-  // Refresh UI components
-  renderHistory();
-  renderPantry();
+  // Hide alert banners
+  const ea=document.getElementById('expiryAlert'), la=document.getElementById('lowAlert');
+  if(ea){
+    ea.classList.remove('show');
+    document.getElementById('expiryAlertItems').innerHTML='';
+  }
+  if(la){
+    la.classList.remove('show');
+    document.getElementById('lowAlertItems').innerHTML='';
+  }
 
-  // Rebuild Shop reminders from pantry entries (auto-added items)
+  // Re-init derived data + re-render
+  initPantryMaster();
   autoAddFromPantry();
   renderShop();
+  renderHH();
+  renderPantry();
+  renderHistory();
+  renderSettings();
 
-  toast('✓ All history has been successfully cleared.');
+  toast('✓ Reset complete. Starting from scratch.');
 }
 
 // ==================== SETTINGS ====================
