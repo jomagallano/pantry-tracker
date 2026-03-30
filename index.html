@@ -754,9 +754,21 @@ function autoAddFromPantry(){
     }
   });
 
+  // Reset alerts so stale reminders don't remain after clearing history
   const ea=document.getElementById('expiryAlert'), la=document.getElementById('lowAlert');
-  if(expiring.length){ ea.classList.add('show'); document.getElementById('expiryAlertItems').innerHTML=expiring.map(i=>`${i.name} — ${i.days===0?'TODAY':i.days+'d left'}`).join('<br>'); }
-  if(low.length){ la.classList.add('show'); document.getElementById('lowAlertItems').innerHTML=low.map(i=>`${i.name} — ${i.qty} remaining`).join('<br>'); }
+  ea.classList.remove('show');
+  la.classList.remove('show');
+  document.getElementById('expiryAlertItems').innerHTML='';
+  document.getElementById('lowAlertItems').innerHTML='';
+
+  if(expiring.length){
+    ea.classList.add('show');
+    document.getElementById('expiryAlertItems').innerHTML=expiring.map(i=>`${i.name} — ${i.days===0?'TODAY':i.days+'d left'}`).join('<br>');
+  }
+  if(low.length){
+    la.classList.add('show');
+    document.getElementById('lowAlertItems').innerHTML=low.map(i=>`${i.name} — ${i.qty} remaining`).join('<br>');
+  }
   saveState();
 }
 
@@ -1514,6 +1526,11 @@ function clearHistory() {
   // Refresh UI components
   renderHistory();
   renderPantry();
+
+  // Rebuild Shop reminders from pantry entries (auto-added items)
+  autoAddFromPantry();
+  renderShop();
+
   toast('✓ All history has been successfully cleared.');
 }
 
