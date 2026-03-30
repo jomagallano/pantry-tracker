@@ -1497,23 +1497,24 @@ function renderPriceHistory(){
 function clearHistory() {
   const confirmed = confirm("Are you sure you want to delete all shopping and price history? This cannot be undone.");
   
-  if (confirmed) {
-    // 1. Clear the trip summaries (the list in the Summary tab)
-    state.history = []; 
-    
-    // 2. Clear the specific item price records (the data for price chips)
-    state.priceHistory = {}; 
-    
-    // 3. Save the empty state to localStorage
-    saveState(); 
-    
-    // 4. Refresh the UI components
-    renderSummary();     // Clears the history list
-    renderInventory();   // Removes price chips from the Inventory tab
-    renderPantry();      // Removes price chips from the Pantry tab
-    
-    alert("All history has been successfully cleared.");
-  }
+  if(!confirmed) return;
+
+  // Clear trip logs (used by the History tab summary + trip history list)
+  state.tripHistory = [];
+
+  // Clear price-related fields on pantry entries (used by Price History list)
+  (state.pantryEntries||[]).forEach(e=>{
+    e.store = '';
+    e.pricePaid = 0;
+    e.dateBought = '';
+  });
+
+  saveState();
+
+  // Refresh UI components
+  renderHistory();
+  renderPantry();
+  toast('✓ All history has been successfully cleared.');
 }
 
 // ==================== SETTINGS ====================
@@ -1640,8 +1641,17 @@ function importData(e){
 function switchTab(tab){
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('tab-'+tab).classList.add('active');
-  document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+
+  const contentEl = document.getElementById('tab-'+tab);
+  if(contentEl) contentEl.classList.add('active');
+
+  // Robustly activate the corresponding button (avoids CSS attribute selector quirks)
+  const btn = [...document.querySelectorAll('.tab')].find(b=>{
+    const oc = b.getAttribute('onclick') || '';
+    return oc.includes(`switchTab('${tab}')`);
+  });
+  if(btn) btn.classList.add('active');
+
   if(tab==='history')   renderHistory();
   if(tab==='household') renderHH();
   if(tab==='pantry')    renderPantry();
