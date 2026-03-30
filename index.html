@@ -2,26 +2,1344 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PantryTrack</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PantryTracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --green-deep: #2d5016; --green-mid: #4a7c2f; --green-soft: #7aad52;
-    --green-pale: #c8ddb0; --green-mist: #eaf3df; --cream: #fdf8f0;
-    --cream-warm: #f5edd8; --brown-light: #c4a882; --brown-mid: #9b7c55;
-    --brown-dark: #6b5237; --text-dark: #2c2416; --text-mid: #5c4a32;
-    --text-soft: #735f4b; --white: #ffffff; --warning: #d46b1a;
-    --warning-bg: #fdf0e0; --danger: #b83c2b; --danger-bg: #fdecea;
-    --shadow: 0 2px 12px rgba(45,80,22,0.10);
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--text-dark); min-height: 100vh; }
+:root {
+  --bg: #F5F2EA;
+  --card: #FFFFFF;
+  --primary: #3A6B4A;
+  --primary-light: #EBF3EE;
+  --primary-dark: #2A5037;
+  --accent: #B87333;
+  --accent-light: #FDF0E4;
+  --danger: #C0392B;
+  --danger-light: #FDECEA;
+  --warning: #D4860A;
+  --warning-light: #FEF5E0;
+  --success: #2E7D50;
+  --text: #1A1A1A;
+  --text-muted: #6B6B6B;
+  --text-light: #A0A0A0;
+  --border: #E2DDD4;
+  --shadow: 0 2px 8px rgba(0,0,0,0.07);
+  --shadow-lg: 0 6px 24px rgba(0,0,0,0.13);
+  --radius: 14px;
+  --radius-sm: 9px;
+  --nav-h: 66px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;max-width:480px;margin:0 auto;position:relative;}
+/* HEADER */
+.hdr{background:var(--primary);color:#fff;padding:14px 18px 12px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;}
+.hdr-title{font-family:'Playfair Display',serif;font-size:21px;font-weight:700;letter-spacing:-0.3px;}
+.hdr-sub{font-size:11px;opacity:.65;margin-top:1px;}
+.hdr-right{display:flex;gap:6px;}
+/* BANNER */
+.banner{background:var(--warning-light);border-bottom:2px solid var(--warning);padding:9px 16px;display:flex;align-items:center;gap:8px;font-size:12px;color:#7A5008;display:none;}
+.banner.show{display:flex;}
+.banner strong{flex:1;}
+.banner .btn-xs{background:var(--warning);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;}
+.banner .dismiss{background:none;border:none;color:#7A5008;font-size:16px;cursor:pointer;padding:0 4px;line-height:1;}
+/* CONTENT */
+.content{padding:14px 14px calc(var(--nav-h) + 70px);min-height:100vh;}
+/* BOTTOM NAV */
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;height:var(--nav-h);background:#fff;border-top:1px solid var(--border);display:flex;z-index:100;box-shadow:0 -2px 10px rgba(0,0,0,0.06);}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--text-light);font-size:10px;font-weight:500;transition:color .15s;border:none;background:none;font-family:'DM Sans',sans-serif;padding:8px 2px;}
+.ni.active{color:var(--primary);}
+.ni svg{width:21px;height:21px;stroke-width:1.8;}
+/* CARDS */
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden;}
+/* SECTION */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin:18px 2px 8px;}
+.sec-hdr:first-child{margin-top:2px;}
+.sec-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:var(--primary-dark);}
+.sec-badge{font-size:11px;color:var(--text-muted);background:var(--primary-light);padding:2px 9px;border-radius:10px;}
+/* PANTRY ITEMS */
+.pi-row{padding:11px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .1s;}
+.pi-row:active{background:#F8F8F8;}
+.pi-icon{width:36px;height:36px;border-radius:9px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.pi-icon.grey{background:#EFEFEF;}
+.pi-info{flex:1;min-width:0;}
+.pi-name{font-weight:600;font-size:14px;}
+.pi-meta{font-size:11px;color:var(--text-muted);margin-top:2px;}
+.pi-right{text-align:right;flex-shrink:0;}
+.pi-qty{font-size:13px;font-weight:700;color:var(--primary);}
+.pi-qty.low{color:var(--warning);}
+.pi-qty.zero{color:var(--text-light);}
+.pi-exp{font-size:10px;margin-top:1px;}
+.pi-exp.warn{color:var(--warning);}
+.pi-exp.red{color:var(--danger);}
+.pi-chevron{color:var(--text-light);flex-shrink:0;transition:transform .2s;}
+.pi-chevron.open{transform:rotate(180deg);}
+.pi-row.greyed{opacity:.45;}
+/* BRANDS */
+.brands{background:var(--bg);border-top:1px solid var(--border);display:none;}
+.brands.open{display:block;}
+.brand-entry{padding:10px 14px 10px 30px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:8px;}
+.brand-entry:last-of-type{border-bottom:none;}
+.be-info{flex:1;min-width:0;}
+.be-name{font-size:13px;font-weight:600;}
+.be-details{font-size:11px;color:var(--text-muted);margin-top:3px;display:flex;flex-wrap:wrap;gap:5px;}
+.be-tag{background:#fff;border:1px solid var(--border);border-radius:4px;padding:1px 5px;}
+.be-tag.warn{background:var(--warning-light);border-color:var(--warning);color:#7A5008;}
+.be-tag.red{background:var(--danger-light);border-color:var(--danger);color:var(--danger);}
+.be-tag.price{background:var(--primary-light);border-color:var(--primary);color:var(--primary-dark);}
+.be-actions{display:flex;gap:4px;flex-shrink:0;}
+.brands-footer{padding:8px 14px 8px 30px;display:flex;gap:6px;}
+.pi-border{border-bottom:1px solid var(--border);}
+.pi-border:last-child{border-bottom:none;}
+/* BUTTONS */
+.btn{border:none;border-radius:var(--radius-sm);padding:9px 15px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s,transform .1s;display:inline-flex;align-items:center;gap:5px;line-height:1.2;}
+.btn:active{transform:scale(0.96);opacity:.85;}
+.btn-primary{background:var(--primary);color:#fff;}
+.btn-secondary{background:var(--primary-light);color:var(--primary);}
+.btn-danger{background:var(--danger-light);color:var(--danger);}
+.btn-accent{background:var(--accent);color:#fff;}
+.btn-warning{background:var(--warning-light);color:var(--warning);}
+.btn-ghost{background:transparent;color:var(--text-muted);}
+.btn-sm{padding:5px 10px;font-size:12px;border-radius:7px;}
+.btn-xs{padding:3px 8px;font-size:11px;border-radius:5px;}
+.btn-icon{padding:6px;background:transparent;border:none;color:var(--text-muted);cursor:pointer;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif;}
+.btn-icon:active{background:var(--bg);}
+.btn-w{width:100%;justify-content:center;}
+/* FAB */
+.fab{position:fixed;bottom:calc(var(--nav-h) + 14px);right:16px;width:50px;height:50px;border-radius:50%;background:var(--primary);color:#fff;border:none;box-shadow:var(--shadow-lg);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:98;transition:transform .15s;}
+.fab:active{transform:scale(0.92);}
+/* MODAL */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;}
+.mo.open{opacity:1;pointer-events:all;}
+.mc{background:#fff;border-radius:var(--radius) var(--radius) 0 0;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;padding:20px;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,1,.5,1);}
+.mo.open .mc{transform:translateY(0);}
+.mhdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.mtitle{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;}
+/* FORMS */
+.fg{margin-bottom:13px;}
+.fl{display:block;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
+.fi,.fs,.ft{width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);background:#fff;outline:none;transition:border-color .2s;-webkit-appearance:none;}
+.fi:focus,.fs:focus,.ft:focus{border-color:var(--primary);}
+.ft{resize:vertical;min-height:75px;}
+.fr2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.fr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.finput-row{display:flex;gap:8px;}
+.finput-row .fi{flex:1;}
+/* SHOPPING */
+.si{display:flex;align-items:center;gap:11px;padding:11px 14px;border-bottom:1px solid var(--border);}
+.si:last-child{border-bottom:none;}
+.si-cb{width:22px;height:22px;border:2px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.si-cb.chk{background:var(--primary);border-color:var(--primary);}
+.si-info{flex:1;min-width:0;}
+.si-name{font-size:14px;font-weight:500;}
+.si-meta{font-size:11px;color:var(--text-muted);margin-top:1px;}
+.src-tag{font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;display:inline-block;}
+.src-manual{background:#E8F4E8;color:#1E6B1E;}
+.src-low{background:var(--warning-light);color:#7A5008;}
+.src-expiring{background:var(--danger-light);color:#7A1A1A;}
+.src-recipe{background:#E6ECF8;color:#1A3E8A;}
+/* DONE SHOPPING BAR */
+.dsbar{position:fixed;bottom:var(--nav-h);left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--primary-dark);color:#fff;padding:11px 16px;display:none;align-items:center;justify-content:space-between;z-index:99;gap:10px;}
+.dsbar.show{display:flex;}
+.dsbar .dslabel{font-size:13px;font-weight:600;}
+.dsbar .btn{background:#fff;color:var(--primary-dark);padding:7px 14px;font-size:12px;}
+/* HISTORY */
+.hi{display:flex;align-items:flex-start;gap:11px;padding:11px 14px;border-bottom:1px solid var(--border);}
+.hi:last-child{border-bottom:none;}
+.hi-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.hi-icon.pur{background:#E8F4E8;}
+.hi-icon.con{background:var(--accent-light);}
+.hi-info{flex:1;min-width:0;}
+.hi-title{font-size:13px;font-weight:600;}
+.hi-meta{font-size:11px;color:var(--text-muted);margin-top:2px;}
+.hi-right{text-align:right;flex-shrink:0;}
+.hi-price{font-size:13px;font-weight:700;color:var(--primary);}
+.hi-type{font-size:10px;color:var(--text-muted);margin-top:2px;}
+/* FILTERS */
+.fpills{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;scrollbar-width:none;}
+.fpills::-webkit-scrollbar{display:none;}
+.fp{border:1.5px solid var(--border);background:#fff;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:500;white-space:nowrap;cursor:pointer;color:var(--text-muted);font-family:'DM Sans',sans-serif;transition:all .15s;}
+.fp.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+/* SEARCH */
+.sbar{position:relative;margin-bottom:12px;}
+.sbar input{width:100%;border:1.5px solid var(--border);border-radius:24px;padding:9px 16px 9px 38px;font-family:'DM Sans',sans-serif;font-size:14px;background:#fff;outline:none;}
+.sbar input:focus{border-color:var(--primary);}
+.sbar svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-light);width:16px;height:16px;stroke-width:2;}
+/* RECIPE */
+.ri{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
+.ri:last-child{border-bottom:none;}
+.ri-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.ri-dot.have{background:var(--success);}
+.ri-dot.low{background:var(--warning);}
+.ri-dot.need{background:var(--danger);}
+.ri-info{flex:1;min-width:0;}
+.ri-name{font-size:13px;font-weight:600;}
+.ri-qty{font-size:11px;color:var(--text-muted);margin-top:1px;}
+.ri-status{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600;flex-shrink:0;}
+.ri-status.have{background:#E8F4E8;color:#1E6B1E;}
+.ri-status.low{background:var(--warning-light);color:#7A5008;}
+.ri-status.need{background:var(--danger-light);color:var(--danger);}
+.saved-recipe{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;}
+.saved-recipe:last-child{border-bottom:none;}
+.saved-recipe:active{background:var(--bg);}
+/* SETTINGS */
+.ss-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;margin-top:20px;}
+.ss-title:first-child{margin-top:0;}
+.srow{background:#fff;border-radius:var(--radius-sm);padding:12px 14px;display:flex;align-items:center;margin-bottom:6px;box-shadow:var(--shadow);}
+.srow-lbl{flex:1;font-size:14px;font-weight:500;}
+.srow-meta{font-size:12px;color:var(--text-muted);}
+.tag-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.tag{background:var(--primary-light);color:var(--primary);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:500;display:flex;align-items:center;gap:5px;}
+.tag-del{cursor:pointer;opacity:.6;font-size:15px;line-height:1;}
+/* EMPTY */
+.empty{text-align:center;padding:44px 20px;color:var(--text-muted);}
+.empty-icon{font-size:42px;margin-bottom:12px;}
+.empty-text{font-size:14px;line-height:1.5;}
+/* TOAST */
+.toast{position:fixed;top:76px;left:50%;transform:translateX(-50%) translateY(-14px);background:#1A1A1A;color:#fff;padding:9px 18px;border-radius:var(--radius);font-size:13px;z-index:500;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;box-shadow:var(--shadow-lg);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+/* CONFIRM */
+.cd{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s;}
+.cd.open{opacity:1;pointer-events:all;}
+.cd-box{background:#fff;border-radius:var(--radius);padding:24px;width:100%;max-width:310px;}
+.cd-title{font-weight:700;font-size:16px;margin-bottom:7px;}
+.cd-msg{font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.5;}
+.cd-acts{display:flex;gap:10px;}
+.cd-acts .btn{flex:1;justify-content:center;}
+/* UTILS */
+hr.div{border:none;border-top:1px solid var(--border);margin:12px 0;}
+.mt4{margin-top:4px;} .mt8{margin-top:8px;} .mt12{margin-top:12px;} .mt16{margin-top:16px;}
+.mb4{margin-bottom:4px;} .mb8{margin-bottom:8px;} .mb12{margin-bottom:12px;}
+.flex{display:flex;} .fc{display:flex;align-items:center;} .fj{display:flex;justify-content:space-between;} .fcj{display:flex;align-items:center;justify-content:space-between;}
+.gap4{gap:4px;} .gap8{gap:8px;} .gap12{gap:12px;}
+.fw6{font-weight:600;} .fs12{font-size:12px;} .fs13{font-size:13px;}
+.color-muted{color:var(--text-muted);}
+.color-primary{color:var(--primary);}
+.color-danger{color:var(--danger);}
+.w100{width:100%;}
+.text-center{text-align:center;}
+.done-badge{background:var(--primary-light);color:var(--primary);font-size:11px;padding:2px 7px;border-radius:4px;font-weight:600;}
+.consumed-row{opacity:.5;text-decoration:line-through;}
+/* purchase form in done-shopping modal */
+.pf-item{background:var(--bg);border-radius:var(--radius-sm);padding:13px;margin-bottom:10px;}
+.pf-item-name{font-weight:700;font-size:14px;margin-bottom:10px;color:var(--primary-dark);}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<!-- Modal -->
+<div id="mo" class="mo" onclick="handleMoClick(event)">
+  <div class="mc" id="mc"></div>
+</div>
+<!-- Confirm Dialog -->
+<div id="cd" class="cd">
+  <div class="cd-box">
+    <div id="cd-title" class="cd-title"></div>
+    <div id="cd-msg" class="cd-msg"></div>
+    <div class="cd-acts">
+      <button class="btn btn-secondary" onclick="closeCD()">Cancel</button>
+      <button id="cd-ok" class="btn btn-danger">Confirm</button>
+    </div>
+  </div>
+</div>
+<!-- Toast -->
+<div id="toast" class="toast"></div>
 
-  /* HEADER */
-  .app-header { background: var(--white); border-bottom: 2px solid var(--green-pale); padding: 16px 20px 0; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
-  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-  .logo { display: flex; align-items: center; gap: 10px; }
-  .logo-icon { width: 38px; height: 38px; background: var(--green-deep); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-  .logo-text { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--green-deep); letter-spacing: -0.5px; }
-  .logo-sub { font-size: 11px; color: var(--
+<script>
+// ============================================================
+// CONSTANTS
+// ============================================================
+const CHANGE_THRESHOLD = 5;
+
+const DEFAULT_CATEGORIES = [
+  {id:'cat_proteins',name:'Proteins',icon:'🥩'},
+  {id:'cat_veg',name:'Vegetables',icon:'🥦'},
+  {id:'cat_fruits',name:'Fruits',icon:'🍎'},
+  {id:'cat_dry',name:'Dry Goods',icon:'🌾'},
+  {id:'cat_condiments',name:'Condiments',icon:'🫙'},
+  {id:'cat_canned',name:'Canned Goods',icon:'🥫'},
+  {id:'cat_dairy',name:'Dairy',icon:'🥛'},
+  {id:'cat_bev',name:'Beverages',icon:'🧃'},
+  {id:'cat_snacks',name:'Snacks',icon:'🍿'},
+  {id:'cat_cleaning',name:'Cleaning',icon:'🧹'},
+  {id:'cat_personal',name:'Personal Care',icon:'🧴'},
+  {id:'cat_others',name:'Others',icon:'📦'},
+];
+
+const DEFAULT_UNITS = ['pcs','bottles','sachets','packs','cans','boxes','bags','g','kg','ml','L','tbsp','tsp','cups'];
+
+const DEFAULT_PANTRY = [
+  {id:'dp1',name:'Chicken',categoryId:'cat_proteins',minStock:1,expiryWarnDays:3,brands:[]},
+  {id:'dp2',name:'Eggs',categoryId:'cat_proteins',minStock:6,expiryWarnDays:7,brands:[]},
+  {id:'dp3',name:'Pork',categoryId:'cat_proteins',minStock:1,expiryWarnDays:3,brands:[]},
+  {id:'dp4',name:'Garlic',categoryId:'cat_veg',minStock:1,expiryWarnDays:14,brands:[]},
+  {id:'dp5',name:'Onion',categoryId:'cat_veg',minStock:2,expiryWarnDays:14,brands:[]},
+  {id:'dp6',name:'Rice',categoryId:'cat_dry',minStock:2,expiryWarnDays:180,brands:[]},
+  {id:'dp7',name:'Cooking Oil',categoryId:'cat_condiments',minStock:1,expiryWarnDays:30,brands:[]},
+  {id:'dp8',name:'Soy Sauce',categoryId:'cat_condiments',minStock:1,expiryWarnDays:90,brands:[]},
+  {id:'dp9',name:'Vinegar',categoryId:'cat_condiments',minStock:1,expiryWarnDays:90,brands:[]},
+  {id:'dp10',name:'Fish Sauce (Patis)',categoryId:'cat_condiments',minStock:1,expiryWarnDays:90,brands:[]},
+];
+
+// ============================================================
+// DATA
+// ============================================================
+let D = {
+  pantry: [],
+  shopping: [],
+  history: [],
+  recipes: [],
+  categories: [],
+  units: [],
+  lastExport: null,
+  changeCount: 0,
+  dismissedAt: -1,
+};
+
+function loadData() {
+  const keys = ['pantry','shopping','history','recipes','categories','units','lastExport','changeCount','dismissedAt'];
+  keys.forEach(k => {
+    const raw = localStorage.getItem('pt_'+k);
+    if (raw !== null) {
+      try { D[k] = JSON.parse(raw); } catch(e) {}
+    }
+  });
+  if (!D.categories || !D.categories.length) D.categories = DEFAULT_CATEGORIES.map(c=>({...c}));
+  if (!D.units || !D.units.length) D.units = [...DEFAULT_UNITS];
+  if (!D.pantry || !D.pantry.length) D.pantry = DEFAULT_PANTRY.map(i=>({...i,brands:[]}));
+}
+
+function saveData() {
+  ['pantry','shopping','history','recipes','categories','units','lastExport','changeCount','dismissedAt'].forEach(k => {
+    localStorage.setItem('pt_'+k, JSON.stringify(D[k]));
+  });
+}
+
+function markChange() {
+  D.changeCount = (D.changeCount || 0) + 1;
+  saveData();
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(D, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'pantrytrack-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  D.lastExport = Date.now();
+  D.changeCount = 0;
+  D.dismissedAt = -1;
+  saveData();
+  showToast('✅ Backup exported!');
+  renderApp();
+}
+
+function importJSON(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (imported.pantry) {
+        Object.assign(D, imported);
+        saveData();
+        showToast('✅ Data restored successfully!');
+        renderApp();
+      } else {
+        showToast('❌ Invalid backup file');
+      }
+    } catch(ex) {
+      showToast('❌ Could not read file');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ============================================================
+// UI STATE
+// ============================================================
+let UI = {
+  tab: 'pantry',
+  expanded: new Set(),
+  checked: new Set(),
+  hFilter: 'all',
+  hSearch: '',
+  pSearch: '',
+  recipeResults: null,
+  recipeInput: {dish:'', notes:''},
+  recipePasted: '',
+};
+
+// ============================================================
+// HELPERS
+// ============================================================
+function uid() { return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function catById(id) { return D.categories.find(c=>c.id===id) || {name:'Others',icon:'📦'}; }
+function catIcon(id) { return catById(id).icon || '📦'; }
+function catName(id) { return catById(id).name || 'Others'; }
+
+function totalQty(item) { return item.brands.reduce((s,b)=>s+(b.quantity||0),0); }
+
+function isLow(item) {
+  const qty = totalQty(item);
+  return qty > 0 && item.minStock > 0 && qty <= item.minStock;
+}
+
+function isOut(item) { return totalQty(item) === 0; }
+
+function expiryStatus(brand, warnDays) {
+  if (!brand.expiryDate) return null;
+  const now = new Date(); now.setHours(0,0,0,0);
+  const exp = new Date(brand.expiryDate + 'T00:00:00');
+  const diff = Math.floor((exp - now) / 86400000);
+  if (diff < 0) return 'expired';
+  if (diff <= (warnDays || 7)) return 'expiring';
+  return 'ok';
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T00:00:00');
+  return dt.toLocaleDateString('en-PH', {month:'short',day:'numeric',year:'numeric'});
+}
+
+function formatDateTime(ts) {
+  if (!ts) return '';
+  const dt = new Date(ts);
+  return dt.toLocaleDateString('en-PH', {month:'short',day:'numeric',year:'numeric'}) + ' ' +
+    dt.toLocaleTimeString('en-PH', {hour:'2-digit',minute:'2-digit'});
+}
+
+function normalizedPrice(price, packSize, packUnit) {
+  if (!price || !packSize) return null;
+  const u = (packUnit||'').toLowerCase();
+  let val, label;
+  if (u === 'g') { val = (price/packSize)*100; label = '/100g'; }
+  else if (u === 'kg') { val = (price/(packSize*1000))*100; label = '/100g'; }
+  else if (u === 'ml') { val = (price/packSize)*100; label = '/100ml'; }
+  else if (u === 'l') { val = (price/(packSize*1000))*100; label = '/100ml'; }
+  else { val = price/packSize; label = '/pc'; }
+  return { val: val.toFixed(2), label };
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+function openCD(title, msg, onOk, okLabel='Confirm', okClass='btn-danger') {
+  document.getElementById('cd-title').textContent = title;
+  document.getElementById('cd-msg').textContent = msg;
+  const ok = document.getElementById('cd-ok');
+  ok.textContent = okLabel;
+  ok.className = 'btn ' + okClass;
+  ok.onclick = () => { closeCD(); onOk(); };
+  document.getElementById('cd').classList.add('open');
+}
+
+function closeCD() { document.getElementById('cd').classList.remove('open'); }
+
+function openModal(html) {
+  document.getElementById('mc').innerHTML = html;
+  document.getElementById('mo').classList.add('open');
+}
+
+function closeModal() { document.getElementById('mo').classList.remove('open'); }
+
+function handleMoClick(e) { if (e.target.id==='mo') closeModal(); }
+
+function checkAutoSuggestions() {
+  // Low stock
+  D.pantry.forEach(item => {
+    const qty = totalQty(item);
+    const isLowStock = qty > 0 && item.minStock > 0 && qty <= item.minStock;
+    const alreadyAdded = D.shopping.find(s => s.pantryItemId === item.id && (s.source==='low-stock'||s.source==='expiring'));
+    if (isLowStock && !alreadyAdded) {
+      D.shopping.push({
+        id: uid(), itemName: item.name, brandPreference:'', category: catName(item.categoryId),
+        quantityNeeded: 1, unit:'', source:'low-stock', pantryItemId: item.id, checked: false
+      });
+    }
+    // Expiring
+    item.brands.forEach(b => {
+      const es = expiryStatus(b, item.expiryWarnDays);
+      if ((es === 'expiring' || es === 'expired') && !D.shopping.find(s => s.pantryItemId===item.id && s.brandPreference===b.brandName && s.source==='expiring')) {
+        D.shopping.push({
+          id: uid(), itemName: item.name, brandPreference: b.brandName, category: catName(item.categoryId),
+          quantityNeeded: 1, unit:'', source:'expiring', pantryItemId: item.id, checked: false
+        });
+      }
+    });
+  });
+  saveData();
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function renderApp() {
+  const el = document.getElementById('app');
+  el.innerHTML = renderHeader() + renderBanner() + renderContent() + renderNav() + renderDSBar();
+  attachEvents();
+}
+
+function renderHeader() {
+  const tabNames = {pantry:'Pantry',shopping:'Shopping List',recipe:'Recipe Checker',history:'History',settings:'Settings'};
+  return `<div class="hdr">
+    <div>
+      <div class="hdr-title">🥫 PantryTrack</div>
+      <div class="hdr-sub">${tabNames[UI.tab] || ''}</div>
+    </div>
+    <div class="hdr-right">
+      ${UI.tab==='pantry'?`<button class="btn-icon" onclick="openAddItemModal()" style="color:#fff" title="Add Item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:20px;height:20px;stroke-width:2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>`:''}
+      ${UI.tab==='shopping'?`<button class="btn-icon" onclick="openAddShopModal()" style="color:#fff" title="Add Item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:20px;height:20px;stroke-width:2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>`:''}
+    </div>
+  </div>`;
+}
+
+function renderBanner() {
+  const unsaved = (D.changeCount || 0) - (D.dismissedAt > 0 ? D.dismissedAt : 0);
+  if (unsaved < CHANGE_THRESHOLD) return '';
+  return `<div class="banner show">
+    <strong>💾 ${D.changeCount} unsaved change${D.changeCount!==1?'s':''} — export a backup</strong>
+    <button class="btn-xs" onclick="exportJSON()">Export Now</button>
+    <button class="dismiss" onclick="dismissBanner()">×</button>
+  </div>`;
+}
+
+function dismissBanner() { D.dismissedAt = D.changeCount; saveData(); renderApp(); }
+
+function renderContent() {
+  let body = '';
+  if (UI.tab==='pantry') body = renderPantry();
+  else if (UI.tab==='shopping') body = renderShopping();
+  else if (UI.tab==='recipe') body = renderRecipe();
+  else if (UI.tab==='history') body = renderHistory();
+  else if (UI.tab==='settings') body = renderSettings();
+  return `<div class="content">${body}</div>`;
+}
+
+function renderNav() {
+  const tabs = [
+    {id:'pantry',label:'Pantry',icon:'<path d="M3 9h18M3 15h18M9 3v18M15 3v18" stroke-linecap="round"/>'},
+    {id:'shopping',label:'Shop',icon:'<path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>'},
+    {id:'recipe',label:'Recipe',icon:'<path d="M12 2a9 9 0 100 18A9 9 0 0012 2z"/><path d="M12 8v4l3 3"/>'},
+    {id:'history',label:'History',icon:'<path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>'},
+    {id:'settings',label:'Settings',icon:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>'},
+  ];
+  return `<nav class="bnav">${tabs.map(t=>`
+    <button class="ni ${UI.tab===t.id?'active':''}" onclick="switchTab('${t.id}')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">${t.icon}</svg>
+      ${t.label}
+    </button>`).join('')}</nav>`;
+}
+
+function renderDSBar() {
+  const checked = D.shopping.filter(s=>s.checked);
+  if (!checked.length) return '<div class="dsbar" id="dsbar"></div>';
+  return `<div class="dsbar show" id="dsbar">
+    <span class="dslabel">✓ ${checked.length} item${checked.length!==1?'s':''} ready</span>
+    <button class="btn" onclick="openDoneShopping()">Done Shopping →</button>
+  </div>`;
+}
+
+// ============================================================
+// PANTRY TAB
+// ============================================================
+function renderPantry() {
+  // Group by category
+  const groups = {};
+  D.categories.forEach(c => groups[c.id] = []);
+  groups['__uncategorized'] = [];
+  D.pantry.forEach(item => {
+    if (groups[item.categoryId] !== undefined) groups[item.categoryId].push(item);
+    else groups['__uncategorized'].push(item);
+  });
+
+  // Search filter
+  const q = (UI.pSearch || '').toLowerCase();
+
+  let html = `<div class="sbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Search pantry…" value="${escHtml(UI.pSearch)}" oninput="UI.pSearch=this.value;renderApp()" /></div>`;
+
+  let anyItem = false;
+  D.categories.forEach(cat => {
+    let items = groups[cat.id] || [];
+    if (q) items = items.filter(i => i.name.toLowerCase().includes(q));
+    if (!items.length) return;
+    anyItem = true;
+    html += `<div class="sec-hdr">
+      <span class="sec-title">${cat.icon} ${cat.name}</span>
+      <span class="sec-badge">${items.length}</span>
+    </div>
+    <div class="card">`;
+    items.forEach(item => {
+      const qty = totalQty(item);
+      const low = isLow(item);
+      const out = isOut(item);
+      const expanded = UI.expanded.has(item.id);
+      const qtyClass = out ? 'zero' : (low ? 'low' : '');
+      const qtyLabel = out ? 'Out of stock' : qty + ' ' + (item.brands[0]?.packUnit || 'units');
+
+      // Soonest expiry
+      let soonestExp = null;
+      item.brands.forEach(b => {
+        const es = expiryStatus(b, item.expiryWarnDays);
+        if (es === 'expired' || es === 'expiring') {
+          if (!soonestExp || es === 'expired') soonestExp = {status:es, date:b.expiryDate};
+        }
+      });
+
+      html += `<div class="pi-border">
+        <div class="pi-row ${out?'greyed':''}" onclick="toggleExpand('${item.id}')">
+          <div class="pi-icon ${out?'grey':''}">${catIcon(item.categoryId)}</div>
+          <div class="pi-info">
+            <div class="pi-name">${escHtml(item.name)}</div>
+            <div class="pi-meta">${item.brands.length} brand${item.brands.length!==1?'s':''} · min ${item.minStock}</div>
+          </div>
+          <div class="pi-right">
+            <div class="pi-qty ${qtyClass}">${out ? '—' : qty}</div>
+            ${soonestExp ? `<div class="pi-exp ${soonestExp.status==='expired'?'red':'warn'}">${soonestExp.status==='expired'?'Expired':'Exp soon'}</div>` : ''}
+          </div>
+          <svg class="pi-chevron ${expanded?'open':''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:16px;height:16px;stroke-width:2;flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="brands ${expanded?'open':''}">
+          ${item.brands.length ? item.brands.map(b => {
+            const es = expiryStatus(b, item.expiryWarnDays);
+            const np = normalizedPrice(b.price, b.packSize, b.packUnit);
+            return `<div class="brand-entry">
+              <div class="be-info">
+                <div class="be-name">${escHtml(b.brandName || 'No brand')}</div>
+                <div class="be-details">
+                  <span class="be-tag">${b.quantity} ${b.packUnit||'pcs'}</span>
+                  <span class="be-tag">${b.packSize}${b.packUnit}/pack</span>
+                  ${b.price ? `<span class="be-tag">₱${b.price}/pack</span>` : ''}
+                  ${np ? `<span class="be-tag price">₱${np.val}${np.label}</span>` : ''}
+                  ${b.expiryDate ? `<span class="be-tag ${es==='expired'?'red':es==='expiring'?'warn':''}">${es==='expired'?'⚠ Expired':'Exp: '+formatDate(b.expiryDate)}</span>` : ''}
+                </div>
+              </div>
+              <div class="be-actions">
+                <button class="btn-icon" onclick="openConsumeModal('${item.id}','${b.id}')" title="Consume">🥄</button>
+                <button class="btn-icon" onclick="openEditBrandModal('${item.id}','${b.id}')" title="Edit">✏️</button>
+                <button class="btn-icon" onclick="deleteBrand('${item.id}','${b.id}')" title="Delete">🗑</button>
+              </div>
+            </div>`;
+          }).join('') : `<div style="padding:10px 14px 10px 30px;font-size:12px;color:var(--text-muted);">No stock yet</div>`}
+          <div class="brands-footer">
+            <button class="btn btn-secondary btn-sm" onclick="openAddBrandModal('${item.id}')">+ Add Brand/Stock</button>
+            <button class="btn btn-ghost btn-sm" onclick="openEditItemModal('${item.id}')">Edit Item</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteItem('${item.id}')">Delete</button>
+          </div>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+
+  if (!anyItem && !q) {
+    html += `<div class="empty"><div class="empty-icon">🥫</div><div class="empty-text">No items yet.<br>Tap + to add your first pantry item.</div></div>`;
+  } else if (!anyItem && q) {
+    html += `<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">No items match "${escHtml(q)}"</div></div>`;
+  }
+  return html;
+}
+
+function toggleExpand(id) {
+  if (UI.expanded.has(id)) UI.expanded.delete(id); else UI.expanded.add(id);
+  renderApp();
+}
+
+// ============================================================
+// SHOPPING TAB
+// ============================================================
+function renderShopping() {
+  const groups = {};
+  D.shopping.forEach(s => {
+    const g = s.category || 'Uncategorized';
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(s);
+  });
+  const groupNames = Object.keys(groups);
+  const checkedCount = D.shopping.filter(s=>s.checked).length;
+
+  if (!D.shopping.length) {
+    return `<div class="empty"><div class="empty-icon">🛒</div><div class="empty-text">Shopping list is empty.<br>Tap + to add items or check pantry for low stock.</div></div>
+    <button class="btn btn-secondary btn-w mt12" onclick="runAutoSuggest()">🔍 Check for Low Stock &amp; Expiring</button>`;
+  }
+
+  let html = `<button class="btn btn-secondary btn-w mb12" onclick="runAutoSuggest()">🔍 Check for Low Stock &amp; Expiring</button>`;
+
+  groupNames.forEach(gName => {
+    const items = groups[gName];
+    html += `<div class="sec-hdr">
+      <span class="sec-title">${gName}</span>
+      <span class="sec-badge">${items.filter(i=>!i.checked).length} left</span>
+    </div>
+    <div class="card">`;
+    items.forEach(s => {
+      const src = s.source || 'manual';
+      const srcLabel = {manual:'Manual',low:'Low Stock','low-stock':'Low Stock',expiring:'Expiring',recipe:'Recipe'}[src] || src;
+      const srcClass = src==='low-stock'?'src-low':src==='expiring'?'src-expiring':src==='recipe'?'src-recipe':'src-manual';
+      html += `<div class="si">
+        <div class="si-cb ${s.checked?'chk':''}" onclick="toggleCheck('${s.id}')">
+          ${s.checked ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" style="width:14px;height:14px;stroke-width:3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+        </div>
+        <div class="si-info">
+          <div class="si-name ${s.checked?'consumed-row':''}">${escHtml(s.itemName)}${s.brandPreference?` <span style="font-weight:400;color:var(--text-muted);">(${escHtml(s.brandPreference)})</span>`:''}</div>
+          <div class="si-meta fc gap4"><span class="src-tag ${srcClass}">${srcLabel}</span> ${s.quantityNeeded?`· qty: ${s.quantityNeeded}${s.unit?' '+s.unit:''}`:''}${s.notes?` · ${escHtml(s.notes)}`:''}</div>
+        </div>
+        <button class="btn-icon" onclick="deleteShopItem('${s.id}')" title="Remove">✕</button>
+      </div>`;
+    });
+    html += '</div>';
+  });
+
+  if (checkedCount > 0) {
+    html += `<button class="btn btn-danger btn-w mt8" onclick="clearChecked()">Remove Checked Items</button>`;
+  }
+  html += `<button class="btn btn-ghost btn-w mt8" onclick="openCD('Clear Shopping List','Remove all items from the shopping list?',()=>{D.shopping=[];saveData();renderApp();})">Clear All</button>`;
+  return html;
+}
+
+function toggleCheck(id) {
+  const s = D.shopping.find(x=>x.id===id);
+  if (s) { s.checked = !s.checked; saveData(); renderApp(); }
+}
+
+function deleteShopItem(id) {
+  D.shopping = D.shopping.filter(x=>x.id!==id);
+  saveData(); renderApp();
+}
+
+function clearChecked() {
+  D.shopping = D.shopping.filter(s=>!s.checked);
+  saveData(); renderApp();
+}
+
+function runAutoSuggest() {
+  checkAutoSuggestions();
+  renderApp();
+  showToast('Shopping list updated');
+}
+
+// ============================================================
+// RECIPE TAB
+// ============================================================
+function renderRecipe() {
+  const saved = D.recipes || [];
+  let html = `<div class="card" style="padding:14px">
+    <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--primary-dark);margin-bottom:12px;">🍳 What do you want to cook?</div>
+    <div class="fg">
+      <label class="fl">Dish Name</label>
+      <input class="fi" id="rDish" placeholder="e.g. Chicken Adobo" value="${escHtml(UI.recipeInput.dish||'')}">
+    </div>
+    <div class="fg">
+      <label class="fl">Notes (optional)</label>
+      <input class="fi" id="rNotes" placeholder="e.g. spicy, no pork, for 4 people" value="${escHtml(UI.recipeInput.notes||'')}">
+    </div>
+    <button class="btn btn-primary btn-w" onclick="copyRecipePrompt()">📋 Copy Prompt to Clipboard</button>
+  </div>`;
+
+  if (UI.recipeInput.dish) {
+    html += `<div class="card" style="padding:14px;margin-top:12px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--primary-dark);">📥 Paste Claude's ingredient list here:</div>
+      <textarea class="ft" id="rPaste" placeholder="Paste the ingredients Claude gave you…" rows="5" oninput="UI.recipePasted=this.value">${escHtml(UI.recipePasted||'')}</textarea>
+      <button class="btn btn-accent btn-w mt8" onclick="parseRecipe()">🔍 Check My Pantry</button>
+    </div>`;
+  }
+
+  if (UI.recipeResults) {
+    const { dish, have, low, need } = UI.recipeResults;
+    html += `<div style="margin-top:12px">
+      <div class="sec-hdr">
+        <span class="sec-title">Results for: ${escHtml(dish)}</span>
+        <button class="btn btn-secondary btn-sm" onclick="saveCurrentRecipe()">💾 Save Recipe</button>
+      </div>
+      <div class="card" style="padding:14px">`;
+
+    if (have.length) {
+      html += `<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--success);margin-bottom:6px;">✅ Have It (${have.length})</div>`;
+      have.forEach(r => {
+        html += `<div class="ri"><div class="ri-dot have"></div><div class="ri-info"><div class="ri-name">${escHtml(r.name)}</div><div class="ri-qty">${r.qtyStr} — In pantry: ${r.pantryQty}</div></div><span class="ri-status have">Have</span></div>`;
+      });
+    }
+    if (low.length) {
+      html += `<hr class="div"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--warning);margin-bottom:6px;">⚠️ Low Stock (${low.length})</div>`;
+      low.forEach(r => {
+        html += `<div class="ri"><div class="ri-dot low"></div><div class="ri-info"><div class="ri-name">${escHtml(r.name)}</div><div class="ri-qty">${r.qtyStr} — Only ${r.pantryQty} left</div></div><button class="btn btn-warning btn-xs" onclick="addRecipeItemToShopping('${escHtml(r.name)}','${escHtml(dish)}')">Add</button></div>`;
+      });
+    }
+    if (need.length) {
+      html += `<hr class="div"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--danger);margin-bottom:6px;">❌ Need to Buy (${need.length})</div>`;
+      need.forEach(r => {
+        html += `<div class="ri"><div class="ri-dot need"></div><div class="ri-info"><div class="ri-name">${escHtml(r.name)}</div><div class="ri-qty">${r.qtyStr}</div></div><button class="btn btn-danger btn-xs" onclick="addRecipeItemToShopping('${escHtml(r.name)}','${escHtml(dish)}')">Add</button></div>`;
+      });
+    }
+    if (need.length > 1 || low.length > 1) {
+      html += `<hr class="div"><button class="btn btn-primary btn-w btn-sm" onclick="addAllMissingToShopping()">Add All Missing to Shopping List</button>`;
+    }
+    html += '</div></div>';
+  }
+
+  if (saved.length) {
+    html += `<div class="sec-hdr"><span class="sec-title">⭐ Saved Recipes</span><span class="sec-badge">${saved.length}</span></div>
+    <div class="card">`;
+    saved.forEach(r => {
+      html += `<div class="saved-recipe" onclick="loadSavedRecipe('${r.id}')">
+        <div style="flex:1"><div style="font-size:13px;font-weight:600;">${escHtml(r.name)}</div><div style="font-size:11px;color:var(--text-muted);">${r.notes||'No notes'}</div></div>
+        <button class="btn-icon" onclick="event.stopPropagation();deleteRecipe('${r.id}')">🗑</button>
+      </div>`;
+    });
+    html += '</div>';
+  }
+  return html;
+}
+
+function copyRecipePrompt() {
+  const dish = document.getElementById('rDish').value.trim();
+  const notes = document.getElementById('rNotes').value.trim();
+  if (!dish) { showToast('Please enter a dish name first'); return; }
+  UI.recipeInput = { dish, notes };
+  const prompt = `Please list all the ingredients needed to cook ${dish}${notes ? ' ('+notes+')' : ''}. List each ingredient on its own line with quantity, unit, and name. Format each line like: "2 cloves garlic" or "500g pork belly" or "3 tbsp soy sauce". Be specific with quantities. List every required ingredient.`;
+  navigator.clipboard.writeText(prompt).then(() => {
+    showToast('✅ Prompt copied! Paste it in Claude.ai');
+    renderApp();
+  }).catch(() => {
+    showToast('Copy failed — please copy manually');
+  });
+}
+
+function parseRecipe() {
+  const text = (document.getElementById('rPaste')?.value || UI.recipePasted || '').trim();
+  if (!text) { showToast('Please paste the ingredient list first'); return; }
+  UI.recipePasted = text;
+  const lines = text.split('\n').map(l=>l.trim()).filter(l=>l.length>2);
+  const ingredients = [];
+  const qtyRe = /^[-•*\d.)\s]*(\d+\.?\d*)\s*(g|kg|ml|l|tbsp?|tsp?|cups?|pcs?|cloves?|heads?|stalks?|bunches?|bottles?|cans?|packs?|pieces?|slices?|lbs?|oz)?\s+(.+)/i;
+  const simpleRe = /^[-•*\d.)\s]*(?:\d+\s+)?(.+)/i;
+  lines.forEach(line => {
+    const m = line.match(qtyRe);
+    if (m) {
+      ingredients.push({ qty: parseFloat(m[1]), unit: m[2]||'', name: m[3].replace(/[,;.]+$/, '').trim() });
+    } else {
+      const m2 = line.match(simpleRe);
+      if (m2) ingredients.push({ qty: 1, unit: '', name: m2[1].replace(/[,;.]+$/, '').trim() });
+    }
+  });
+
+  const have = [], low = [], need = [];
+  ingredients.forEach(ing => {
+    const ingNameL = ing.name.toLowerCase().replace(/[()]/g,'');
+    const match = D.pantry.find(p => {
+      const pL = p.name.toLowerCase();
+      return pL.includes(ingNameL) || ingNameL.includes(pL) ||
+        ingNameL.split(' ').some(w => w.length>3 && pL.includes(w));
+    });
+    const qtyStr = ing.qty + (ing.unit?' '+ing.unit:'') + ' ' + ing.name;
+    if (match) {
+      const qty = totalQty(match);
+      if (isLow(match)) {
+        low.push({ name: ing.name, qtyStr, pantryQty: qty + ' ' + (match.brands[0]?.packUnit||'units'), pantryId: match.id });
+      } else {
+        have.push({ name: ing.name, qtyStr, pantryQty: qty + ' ' + (match.brands[0]?.packUnit||'units'), pantryId: match.id });
+      }
+    } else {
+      need.push({ name: ing.name, qtyStr });
+    }
+  });
+
+  UI.recipeResults = { dish: UI.recipeInput.dish, have, low, need };
+  renderApp();
+}
+
+function addRecipeItemToShopping(itemName, recipeName) {
+  const already = D.shopping.find(s => s.itemName.toLowerCase()===itemName.toLowerCase() && s.category===recipeName);
+  if (already) { showToast('Already on list'); return; }
+  D.shopping.push({ id: uid(), itemName, brandPreference:'', category: recipeName, quantityNeeded:1, unit:'', source:'recipe', checked:false });
+  markChange();
+  showToast(`✅ Added to "${recipeName}"`);
+  renderApp();
+}
+
+function addAllMissingToShopping() {
+  if (!UI.recipeResults) return;
+  const dish = UI.recipeResults.dish;
+  let count = 0;
+  [...UI.recipeResults.need, ...UI.recipeResults.low].forEach(r => {
+    const already = D.shopping.find(s => s.itemName.toLowerCase()===r.name.toLowerCase() && s.category===dish);
+    if (!already) { D.shopping.push({ id:uid(), itemName:r.name, brandPreference:'', category:dish, quantityNeeded:1, unit:'', source:'recipe', checked:false }); count++; }
+  });
+  markChange();
+  showToast(`✅ Added ${count} item${count!==1?'s':''} to shopping list`);
+  renderApp();
+}
+
+function saveCurrentRecipe() {
+  if (!UI.recipeResults) return;
+  const r = { id: uid(), name: UI.recipeInput.dish, notes: UI.recipeInput.notes, savedAt: Date.now() };
+  D.recipes = D.recipes || [];
+  D.recipes.push(r);
+  markChange();
+  showToast('⭐ Recipe saved!');
+  renderApp();
+}
+
+function deleteRecipe(id) {
+  D.recipes = D.recipes.filter(r=>r.id!==id);
+  markChange(); renderApp();
+}
+
+function loadSavedRecipe(id) {
+  const r = (D.recipes||[]).find(x=>x.id===id);
+  if (!r) return;
+  UI.recipeInput = { dish: r.name, notes: r.notes || '' };
+  UI.recipePasted = '';
+  UI.recipeResults = null;
+  renderApp();
+  showToast(`Loaded: ${r.name}`);
+}
+
+// ============================================================
+// HISTORY TAB
+// ============================================================
+function renderHistory() {
+  let items = [...D.history].reverse();
+  if (UI.hFilter !== 'all') items = items.filter(h => h.type === UI.hFilter);
+  if (UI.hSearch) items = items.filter(h => h.itemName.toLowerCase().includes(UI.hSearch.toLowerCase()) || (h.brandName||'').toLowerCase().includes(UI.hSearch.toLowerCase()));
+
+  let html = `<div class="fpills">
+    <button class="fp ${UI.hFilter==='all'?'active':''}" onclick="UI.hFilter='all';renderApp()">All</button>
+    <button class="fp ${UI.hFilter==='purchase'?'active':''}" onclick="UI.hFilter='purchase';renderApp()">Purchases</button>
+    <button class="fp ${UI.hFilter==='consumption'?'active':''}" onclick="UI.hFilter='consumption';renderApp()">Consumed</button>
+  </div>
+  <div class="sbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Search history…" value="${escHtml(UI.hSearch)}" oninput="UI.hSearch=this.value;renderApp()"/></div>`;
+
+  if (!items.length) {
+    html += `<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No history yet.</div></div>`;
+  } else {
+    html += `<div class="card">`;
+    items.forEach(h => {
+      const isPur = h.type === 'purchase';
+      html += `<div class="hi">
+        <div class="hi-icon ${isPur?'pur':'con'}">${isPur?'🛒':'🥄'}</div>
+        <div class="hi-info">
+          <div class="hi-title">${escHtml(h.itemName)}${h.brandName?` <span style="font-weight:400">(${escHtml(h.brandName)})</span>`:''}</div>
+          <div class="hi-meta">${h.quantity} ${h.unit||'units'}${h.category?' · '+escHtml(h.category):''}</div>
+          <div style="font-size:11px;color:var(--text-light);margin-top:2px;">${formatDateTime(h.date)}</div>
+        </div>
+        <div class="hi-right">
+          ${isPur && h.price ? `<div class="hi-price">₱${(h.price*h.quantity).toFixed(2)}</div>` : ''}
+          <div class="hi-type ${isPur?'color-primary':''}" style="color:${isPur?'var(--success)':'var(--accent)'};font-size:10px;font-weight:700;text-transform:uppercase;">${isPur?'Purchase':'Consumed'}</div>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+    html += `<button class="btn btn-danger btn-w mt12" onclick="openCD('Clear History','This will permanently delete all history. Are you sure?',clearHistory)">🗑 Clear All History</button>`;
+  }
+  return html;
+}
+
+function clearHistory() { D.history = []; saveData(); renderApp(); showToast('History cleared'); }
+
+// ============================================================
+// SETTINGS TAB
+// ============================================================
+function renderSettings() {
+  const lastExp = D.lastExport ? new Date(D.lastExport).toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}) : 'Never';
+  let html = `<div class="ss-title">Data Backup</div>`;
+  html += `<div class="srow"><div class="srow-lbl">Last Export</div><span class="srow-meta">${lastExp}</span></div>`;
+  html += `<button class="btn btn-primary btn-w mb4" onclick="exportJSON()">📤 Export JSON Backup</button>`;
+  html += `<label class="btn btn-secondary btn-w" style="justify-content:center;cursor:pointer;">📥 Import JSON Backup<input type="file" accept=".json" style="display:none" onchange="importJSON(this.files[0])"></label>`;
+
+  html += `<div class="ss-title" style="margin-top:20px;">Categories</div>
+  <div class="card" style="padding:12px">
+    <div class="tag-list">`;
+  D.categories.forEach(c => {
+    html += `<div class="tag">${c.icon} ${escHtml(c.name)} <span class="tag-del" onclick="deleteCategory('${c.id}')">×</span></div>`;
+  });
+  html += `</div>
+    <div class="fc gap8 mt12">
+      <input class="fi" id="newCatName" placeholder="Category name" style="flex:1">
+      <input class="fi" id="newCatIcon" placeholder="🍕" style="width:56px;text-align:center">
+      <button class="btn btn-primary btn-sm" onclick="addCategory()">Add</button>
+    </div>
+  </div>`;
+
+  html += `<div class="ss-title">Units</div>
+  <div class="card" style="padding:12px">
+    <div class="tag-list">`;
+  D.units.forEach(u => {
+    html += `<div class="tag">${escHtml(u)} <span class="tag-del" onclick="deleteUnit('${escHtml(u)}')">×</span></div>`;
+  });
+  html += `</div>
+    <div class="fc gap8 mt12">
+      <input class="fi" id="newUnit" placeholder="New unit (e.g. pouches)">
+      <button class="btn btn-primary btn-sm" onclick="addUnit()">Add</button>
+    </div>
+  </div>`;
+
+  html += `<div class="ss-title">Danger Zone</div>
+  <button class="btn btn-danger btn-w" onclick="openCD('Clear All Data','This will permanently delete ALL pantry, shopping, history, and settings data. This cannot be undone.',clearAllData,'Delete Everything','btn-danger')">🗑 Clear All Data</button>`;
+
+  return html;
+}
+
+// ============================================================
+// ITEM MODALS
+// ============================================================
+function openAddItemModal(prefill) {
+  const cats = D.categories.map(c => `<option value="${c.id}" ${prefill?.categoryId===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('');
+  const p = prefill || {};
+  openModal(`
+    <div class="mhdr"><div class="mtitle">Add Pantry Item</div><button class="btn-icon" onclick="closeModal()">✕</button></div>
+    <div class="fg"><label class="fl">Item Name *</label><input class="fi" id="miName" placeholder="e.g. Vinegar" value="${escHtml(p.name||'')}"></div>
+    <div class="fg"><label class="fl">Category</label><select class="fs" id="miCat">${cats}</select></div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Min Stock</label><input class="fi" id="miMin" type="number" min="0" placeholder="1" value="${p.minStock||1}"></div>
+      <div class="fg"><label class="fl">Expiry Warn (days)</label><input class="fi" id="miWarn" type="number" min="1" placeholder="7" value="${p.expiryWarnDays||7}"></div>
+    </div>
+    <button class="btn btn-primary btn-w" onclick="submitAddItem()">Add Item</button>
+  `);
+}
+
+function submitAddItem() {
+  const name = document.getElementById('miName').value.trim();
+  if (!name) { showToast('Please enter a name'); return; }
+  const item = {
+    id: uid(), name,
+    categoryId: document.getElementById('miCat').value,
+    minStock: parseInt(document.getElementById('miMin').value)||1,
+    expiryWarnDays: parseInt(document.getElementById('miWarn').value)||7,
+    brands: []
+  };
+  D.pantry.push(item);
+  markChange(); closeModal(); renderApp();
+  showToast('✅ Item added');
+}
+
+function openEditItemModal(itemId) {
+  const item = D.pantry.find(i=>i.id===itemId);
+  if (!item) return;
+  const cats = D.categories.map(c => `<option value="${c.id}" ${item.categoryId===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('');
+  openModal(`
+    <div class="mhdr"><div class="mtitle">Edit Item</div><button class="btn-icon" onclick="closeModal()">✕</button></div>
+    <div class="fg"><label class="fl">Item Name *</label><input class="fi" id="eiName" value="${escHtml(item.name)}"></div>
+    <div class="fg"><label class="fl">Category</label><select class="fs" id="eiCat">${cats}</select></div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Min Stock</label><input class="fi" id="eiMin" type="number" min="0" value="${item.minStock}"></div>
+      <div class="fg"><label class="fl">Expiry Warn (days)</label><input class="fi" id="eiWarn" type="number" min="1" value="${item.expiryWarnDays}"></div>
+    </div>
+    <button class="btn btn-primary btn-w" onclick="submitEditItem('${itemId}')">Save Changes</button>
+  `);
+}
+
+function submitEditItem(itemId) {
+  const item = D.pantry.find(i=>i.id===itemId);
+  if (!item) return;
+  const name = document.getElementById('eiName').value.trim();
+  if (!name) { showToast('Name required'); return; }
+  item.name = name;
+  item.categoryId = document.getElementById('eiCat').value;
+  item.minStock = parseInt(document.getElementById('eiMin').value)||1;
+  item.expiryWarnDays = parseInt(document.getElementById('eiWarn').value)||7;
+  markChange(); closeModal(); renderApp();
+  showToast('✅ Item updated');
+}
+
+function deleteItem(itemId) {
+  openCD('Delete Item', 'Remove this item and all its brand entries from your pantry?', () => {
+    D.pantry = D.pantry.filter(i=>i.id!==itemId);
+    markChange(); renderApp();
+    showToast('Item deleted');
+  });
+}
+
+// ============================================================
+// BRAND MODALS
+// ============================================================
+function openAddBrandModal(itemId) {
+  const item = D.pantry.find(i=>i.id===itemId);
+  if (!item) return;
+  const unitOpts = D.units.map(u=>`<option>${u}</option>`).join('');
+  openModal(`
+    <div class="mhdr"><div class="mtitle">Add Stock — ${escHtml(item.name)}</div><button class="btn-icon" onclick="closeModal()">✕</button></div>
+    <div class="fg"><label class="fl">Brand Name</label><input class="fi" id="bName" placeholder="e.g. Datu Puti (optional)"></div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Pack Size *</label><input class="fi" id="bPackSize" type="number" min="0.1" step="any" placeholder="e.g. 500"></div>
+      <div class="fg"><label class="fl">Unit *</label><select class="fs" id="bUnit">${unitOpts}</select></div>
+    </div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Qty Owned *</label><input class="fi" id="bQty" type="number" min="1" placeholder="e.g. 2"></div>
+      <div class="fg"><label class="fl">Price per Pack (₱)</label><input class="fi" id="bPrice" type="number" min="0" step="any" placeholder="e.g. 45"></div>
+    </div>
+    <div class="fg"><label class="fl">Expiry Date</label><input class="fi" id="bExpiry" type="date"></div>
+    <button class="btn btn-primary btn-w" onclick="submitAddBrand('${itemId}')">Add Stock</button>
+  `);
+}
+
+function submitAddBrand(itemId) {
+  const item = D.pantry.find(i=>i.id===itemId);
+  if (!item) return;
+  const packSize = parseFloat(document.getElementById('bPackSize').value);
+  const qty = parseInt(document.getElementById('bQty').value);
+  if (!packSize || !qty) { showToast('Pack size and quantity required'); return; }
+  const brand = {
+    id: uid(),
+    brandName: document.getElementById('bName').value.trim(),
+    packSize, packUnit: document.getElementById('bUnit').value,
+    quantity: qty,
+    price: parseFloat(document.getElementById('bPrice').value)||0,
+    expiryDate: document.getElementById('bExpiry').value || null,
+  };
+  item.brands.push(brand);
+  markChange(); closeModal(); renderApp();
+  showToast('✅ Stock added');
+  checkAutoSuggestions();
+}
+
+function openEditBrandModal(itemId, brandId) {
+  const item = D.pantry.find(i=>i.id===itemId);
+  const brand = item?.brands.find(b=>b.id===brandId);
+  if (!brand) return;
+  const unitOpts = D.units.map(u=>`<option ${u===brand.packUnit?'selected':''}>${u}</option>`).join('');
+  openModal(`
+    <div class="mhdr"><div class="mtitle">Edit Stock — ${escHtml(item.name)}</div><button class="btn-icon" onclick="closeModal()">✕</button></div>
+    <div class="fg"><label class="fl">Brand Name</label><input class="fi" id="ebName" value="${escHtml(brand.brandName||'')}"></div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Pack Size *</label><input class="fi" id="ebPackSize" type="number" value="${brand.packSize}"></div>
+      <div class="fg"><label class="fl">Unit *</label><select class="fs" id="ebUnit">${unitOpts}</select></div>
+    </div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Qty Owned *</label><input class="fi" id="ebQty" type="number" value="${brand.quantity}"></div>
+      <div class="fg"><label class="fl">Price per Pack (₱)</label><input class="fi" id="ebPrice" type="number" step="any" value="${brand.price||''}"></div>
+    </div>
+    <div class="fg"><label class="fl">Expiry Date</label><input class="fi" id="ebExpiry" type="date" value="${brand.expiryDate||''}"></div>
+    <button class="btn btn-primary btn-w" onclick="submitEditBrand('${itemId}','${brandId}')">Save Changes</button>
+  `);
+}
+
+function submitEditBrand(itemId, brandId) {
+  const item = D.pantry.find(i=>i.id===itemId);
+  const brand = item?.brands.find(b=>b.id===brandId);
+  if (!brand) return;
+  brand.brandName = document.getElementById('ebName').value.trim();
+  brand.packSize = parseFloat(document.getElementById('ebPackSize').value)||brand.packSize;
+  brand.packUnit = document.getElementById('ebUnit').value;
+  brand.quantity = parseInt(document.getElementById('ebQty').value)||0;
+  brand.price = parseFloat(document.getElementById('ebPrice').value)||0;
+  brand.expiryDate = document.getElementById('ebExpiry').value || null;
+  markChange(); closeModal(); renderApp(); showToast('✅ Updated');
+}
+
+function deleteBrand(itemId, brandId) {
+  openCD('Remove Brand Entry', 'Remove this brand/stock entry?', () => {
+    const item = D.pantry.find(i=>i.id===itemId);
+    if (item) { item.brands = item.brands.filter(b=>b.id!==brandId); markChange(); renderApp(); }
+  });
+}
+
+// ============================================================
+// CONSUME MODAL
+// ============================================================
+function openConsumeModal(itemId, suggestBrandId) {
+  const item = D.pantry.find(i=>i.id===itemId);
+  if (!item || !item.brands.length) { showToast('No stock to consume'); return; }
+  // Sort brands by expiry (oldest first)
+  const sorted = [...item.brands].sort((a,b) => {
+    if (!a.expiryDate) return 1;
+    if (!b.expiryDate) return -1;
+    return new Date(a.expiryDate) - new Date(b.expiryDate);
+  });
+  const brandOpts = sorted.map(b => {
+    const exp = b.expiryDate ? ` (exp: ${formatDate(b.expiryDate)})` : '';
+    const oldest = sorted[0].id === b.id ? ' ⬅ oldest' : '';
+    return `<option value="${b.id}" ${b.id===sorted[0].id?'selected':''}>${escHtml(b.brandName||'No brand')} — ${b.quantity} ${b.packUnit}${exp}${oldest}</option>`;
+  }).join('');
+  openModal(`
+    <div class="mhdr"><div class="mtitle">Consume — ${escHtml(item.name)}</div><button class="btn-icon" onclick="closeModal()">✕</button></div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">App suggests the oldest stock first.</div>
+    <div class="fg"><label class="fl">Brand / Stock</label><select class="fs" id="conBrand">${brandOpts}</select></div>
+    <div class="fg"><label class="fl">Quantity Used *</label><input class="fi" id="conQty" type="number" min="1" placeholder="1" value="1"></div>
+    <button class="btn btn-accent btn-w" onclick="submitConsume('${itemId}')">Log Consumption</button>
+  `);
+}
+
+function submitConsume(itemId) {
+  const item = D.pantry.find(i=>i.id===itemId);
+  const brandId = document.getElementById('conBrand').value;
+  const brand = item?.brands.find(b=>b.id===brandId);
+  if (!brand) return;
+  const qty = parseInt(document.getElementById('conQty').value)||1;
+  if (qty > brand.quantity) { showToast(`Only ${brand.quantity} in stock`); return; }
+  brand.quantity -= qty;
+  D.history.push({
+    id: uid(), type: 'consumption', date: Date.now(),
+    itemName: item.name, brandName: brand.brandName, quantity: qty,
+    unit: brand.packUnit, category: catName(item.categoryId)
+  });
+  if (brand.quantity === 0) item.brands = item.brands.filter(b=>b.id!==brandId);
+  markChange(); closeModal(); renderApp();
+  showToast(`✅ Logged ${qty} ${brand.packUnit} consumed`);
+  checkAutoSuggestions();
+}
+
+// ============================================================
+// ADD SHOPPING ITEM MODAL
+// ============================================================
+function openAddShopModal() {
+  const catOpts = D.categories.map(c=>`<option>${c.name}</option>`).join('');
+  const unitOpts = D.units.map(u=>`<option>${u}</option>`).join('');
+  openModal(`
+    <div class="mhdr"><div class="mtitle">Add to Shopping List</div><button class="btn-icon" onclick="closeModal()">✕</button></div>
+    <div class="fg"><label class="fl">Item Name *</label><input class="fi" id="siName" placeholder="e.g. Vinegar"></div>
+    <div class="fg"><label class="fl">Brand Preference (optional)</label><input class="fi" id="siBrand" placeholder="e.g. Datu Puti"></div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Quantity</label><input class="fi" id="siQty" type="number" min="1" value="1"></div>
+      <div class="fg"><label class="fl">Unit</label><select class="fs" id="siUnit">${unitOpts}</select></div>
+    </div>
+    <div class="fg"><label class="fl">Category</label><select class="fs" id="siCat"><option value="">Uncategorized</option>${catOpts}</select></div>
+    <div class="fg"><label class="fl">Notes (optional)</label><input class="fi" id="siNotes" placeholder="e.g. buy 2, any brand"></div>
+    <button class="btn btn-primary btn-w" onclick="submitAddShopItem()">Add to List</button>
+  `);
+}
+
+function submitAddShopItem() {
+  const name = document.getElementById('siName').value.trim();
+  if (!name) { showToast('Item name required'); return; }
+  D.shopping.push({
+    id: uid(), itemName: name,
+    brandPreference: document.getElementById('siBrand').value.trim(),
+    category: document.getElementById('siCat').value || 'Uncategorized',
+    quantityNeeded: parseInt(document.getElementById('siQty').value)||1,
+    unit: document.getElementById('siUnit').value,
+    notes: document.getElementById('siNotes').value.trim(),
+    source: 'manual', checked: false
+  });
+  markChange(); closeModal(); renderApp(); showToast('✅ Added to list');
+}
+
+// ============================================================
+// DONE SHOPPING MODAL
+// ============================================================
+function openDoneShopping() {
+  const checked = D.shopping.filter(s=>s.checked);
+  if (!checked.length) return;
+  const unitOpts = D.units.map(u=>`<option>${u}</option>`).join('');
+  let forms = checked.map((s,i) => `
+    <div class="pf-item">
+      <div class="pf-item-name">${i+1}. ${escHtml(s.itemName)}</div>
+      <div class="fg"><label class="fl">Brand Name</label><input class="fi" id="ds_brand_${s.id}" placeholder="Brand (optional)" value="${escHtml(s.brandPreference||'')}"></div>
+      <div class="fr2">
+        <div class="fg"><label class="fl">Pack Size *</label><input class="fi" id="ds_ps_${s.id}" type="number" min="0.1" step="any" placeholder="e.g. 500"></div>
+        <div class="fg"><label class="fl">Unit *</label><select class="fs" id="ds_unit_${s.id}">${unitOpts}</select></div>
+      </div>
+      <div class="fr2">
+        <div class="fg"><label class="fl">Qty Bought *</label><input class="fi" id="ds_qty_${s.id}" type="number" min="1" value="${s.quantityNeeded||1}"></div>
+        <div class="fg"><label class="fl">Price per Pack (₱)</label><input class="fi" id="ds_price_${s.id}" type="number" step="any" placeholder="0"></div>
+      </div>
+      <div class="fg"><label class="fl">Expiry Date</label><input class="fi" id="ds_exp_${s.id}" type="date"></div>
+    </div>
+  `).join('');
+  openModal(`
+    <div class="mhdr"><div class="mtitle">🛒 Done Shopping</div><button class="btn-icon" onclick="closeModal()">✕</button></div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">Fill in details for ${checked.length} item${checked.length!==1?'s':''} you bought. They'll be added to your pantry.</div>
+    ${forms}
+    <button class="btn btn-primary btn-w" onclick="submitDoneShopping()">✅ Confirm & Update Pantry</button>
+  `);
+}
+
+function submitDoneShopping() {
+  const checked = D.shopping.filter(s=>s.checked);
+  let added = 0;
+  checked.forEach(s => {
+    const packSize = parseFloat(document.getElementById('ds_ps_'+s.id)?.value);
+    const qty = parseInt(document.getElementById('ds_qty_'+s.id)?.value)||1;
+    if (!packSize) return;
+    const brandName = document.getElementById('ds_brand_'+s.id)?.value.trim()||'';
+    const packUnit = document.getElementById('ds_unit_'+s.id)?.value||'pcs';
+    const price = parseFloat(document.getElementById('ds_price_'+s.id)?.value)||0;
+    const expiryDate = document.getElementById('ds_exp_'+s.id)?.value||null;
+    // Find or create pantry item
+    let item = D.pantry.find(p => p.name.toLowerCase() === s.itemName.toLowerCase());
+    if (!item) {
+      const catId = D.categories.find(c=>c.name===s.category)?.id || 'cat_others';
+      item = { id:uid(), name:s.itemName, categoryId:catId, minStock:1, expiryWarnDays:7, brands:[] };
+      D.pantry.push(item);
+    }
+    // Find or add brand
+    const existingBrand = item.brands.find(b => b.brandName.toLowerCase()===(brandName||'').toLowerCase() && b.packUnit===packUnit);
+    if (existingBrand) {
+      existingBrand.quantity += qty;
+      if (expiryDate) existingBrand.expiryDate = expiryDate;
+      if (price) existingBrand.price = price;
+    } else {
+      item.brands.push({ id:uid(), brandName, packSize, packUnit, quantity:qty, price, expiryDate });
+    }
+    // Log to history
+    D.history.push({ id:uid(), type:'purchase', date:Date.now(), itemName:s.itemName, brandName, quantity:qty, unit:packUnit, price, category:s.category });
+    added++;
+  });
+  D.shopping = D.shopping.filter(s=>!s.checked);
+  markChange(); closeModal(); renderApp();
+  showToast(`✅ ${added} item${added!==1?'s':''} added to pantry`);
+}
+
+// ============================================================
+// SETTINGS ACTIONS
+// ============================================================
+function addCategory() {
+  const name = document.getElementById('newCatName').value.trim();
+  const icon = document.getElementById('newCatIcon').value.trim() || '📦';
+  if (!name) { showToast('Enter a category name'); return; }
+  if (D.categories.find(c=>c.name.toLowerCase()===name.toLowerCase())) { showToast('Category already exists'); return; }
+  D.categories.push({ id: uid(), name, icon });
+  markChange(); renderApp();
+}
+
+function deleteCategory(id) {
+  if (D.pantry.some(i=>i.categoryId===id)) { showToast('Remove items in this category first'); return; }
+  D.categories = D.categories.filter(c=>c.id!==id);
+  markChange(); renderApp();
+}
+
+function addUnit() {
+  const val = document.getElementById('newUnit').value.trim();
+  if (!val) return;
+  if (D.units.includes(val)) { showToast('Unit already exists'); return; }
+  D.units.push(val);
+  markChange(); renderApp();
+}
+
+function deleteUnit(name) {
+  D.units = D.units.filter(u=>u!==name);
+  markChange(); renderApp();
+}
+
+function clearAllData() {
+  D = { pantry:DEFAULT_PANTRY.map(i=>({...i,brands:[]})), shopping:[], history:[], recipes:[], categories:DEFAULT_CATEGORIES.map(c=>({...c})), units:[...DEFAULT_UNITS], lastExport:null, changeCount:0, dismissedAt:-1 };
+  saveData(); renderApp(); showToast('All data cleared');
+}
+
+// ============================================================
+// MISC
+// ============================================================
+function switchTab(t) { UI.tab = t; UI.pSearch=''; UI.hSearch=''; renderApp(); }
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
+function attachEvents() {
+  // Keyboard on search inputs is handled by oninput inline
+}
+
+// ============================================================
+// INIT
+// ============================================================
+loadData();
+renderApp();
+</script>
+</body>
+</html>
