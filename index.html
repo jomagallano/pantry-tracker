@@ -398,10 +398,13 @@
     <div class="section-card">
       <div class="section-header"><div class="section-title">📋 Trip History</div></div>
       <div id="tripHistory"></div>
-    </div>
-    <div class="action-row">
-      <button class="btn btn-danger btn-sm" onclick="clearHistory()">🗑 Clear Trip History</button>
-    </div>
+  </div>
+  <div class="action-row" style="margin-bottom: 16px;">
+  <button class="btn btn-danger btn-sm" onclick="clearHistory()">
+    Clear History
+  </button>
+</div>
+<div id="historylist">
   </div>
 
   <!-- SETTINGS TAB -->
@@ -1491,7 +1494,25 @@ function renderPriceHistory(){
   }).join('');
 }
 
-function clearHistory(){ if(confirm('Clear all trip history?')){state.tripHistory=[];saveState();renderHistory();} }
+function clearHistory() {
+  if (confirm("Are you sure you want to delete all shopping history? This cannot be undone.")) {
+    state.history = []; // Clear the history array in the state object
+    saveState();        // Persist the empty array to localStorage
+    renderSummary();    // Refresh the Summary tab to show an empty state
+    
+    // Optional: show a confirmation alert if you have an alert system
+    console.log("History cleared successfully.");
+  }
+}
+function clearAllHistory() {
+  if (confirm("Clear all trip and price history?")) {
+    state.history = [];
+    state.priceHistory = {}; // Resets the item-specific price tracking
+    saveState();
+    renderSummary();
+    renderPriceHistory(); // If you have a separate price history render function
+  }
+}
 
 // ==================== SETTINGS ====================
 function renderSettings(){
