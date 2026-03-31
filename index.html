@@ -219,6 +219,18 @@ hr.div{border:none;border-top:1px solid var(--border);margin:12px 0;}
 .text-center{text-align:center;}
 .done-badge{background:var(--primary-light);color:var(--primary);font-size:11px;padding:2px 7px;border-radius:4px;font-weight:600;}
 .consumed-row{opacity:.5;text-decoration:line-through;}
+/* MEAL SUGGESTIONS */
+.ms-card{background:#fff;border-radius:var(--radius-sm);border:1.5px solid var(--border);padding:13px;margin-bottom:10px;}
+.ms-card.ready{border-color:var(--primary);background:var(--primary-light);}
+.ms-card.almost{border-color:var(--warning);background:var(--warning-light);}
+.ms-name{font-weight:700;font-size:14px;margin-bottom:4px;}
+.ms-desc{font-size:12px;color:var(--text-muted);margin-bottom:8px;line-height:1.4;}
+.ms-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+.ms-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;text-transform:uppercase;letter-spacing:.3px;}
+.ms-badge.ready{background:var(--primary);color:#fff;}
+.ms-badge.almost{background:var(--warning);color:#fff;}
+.ms-badge.time{background:#E8E8E8;color:var(--text);}
+.ms-missing{font-size:11px;color:var(--danger);margin-bottom:8px;}
 /* purchase form in done-shopping modal */
 .pf-item{background:var(--bg);border-radius:var(--radius-sm);padding:13px;margin-bottom:10px;}
 .pf-item-name{font-weight:700;font-size:14px;margin-bottom:10px;color:var(--primary-dark);}
@@ -366,6 +378,9 @@ let UI = {
   hSearch: '',
   pSearch: '',
   pSearchTimer: null,
+  mealSuggestInput: { servings: 2, time: 'normal', cuisine: 'any' },
+  mealSuggestPasted: '',
+  mealSuggestions: null,
   pFilter: 'all',
   recipeResults: null,
   recipeInput: {dish:'', notes:''},
@@ -955,6 +970,89 @@ function renderRecipe() {
     });
     html += '</div>';
   }
+
+  // MEAL SUGGESTIONS SECTION
+  const ms = UI.mealSuggestInput;
+  html += `<div class="sec-hdr"><span class="sec-title">🍽 What Should I Cook?</span></div>`;
+  html += `<div class="card" style="padding:14px">
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">App will scan your pantry and ask Claude to suggest 3 meals you can make.</div>
+    <div class="fr2">
+      <div class="fg">
+        <label class="fl">Servings</label>
+        <input class="fi" id="msServings" type="number" min="1" max="20" value="${ms.servings||2}">
+      </div>
+      <div class="fg">
+        <label class="fl">Time Available</label>
+        <select class="fs" id="msTime">
+          <option value="quick" ${ms.time==='quick'?'selected':''}>Quick (≤30 min)</option>
+          <option value="normal" ${ms.time==='normal'?'selected':''}>Normal (~1 hr)</option>
+          <option value="full" ${ms.time==='full'?'selected':''}>Full Cook (2hr+)</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Cuisine</label>
+      <select class="fs" id="msCuisine">
+        <option value="any" ${ms.cuisine==='any'?'selected':''}>Any</option>
+        <option value="Filipino" ${ms.cuisine==='Filipino'?'selected':''}>Filipino</option>
+        <option value="Asian" ${ms.cuisine==='Asian'?'selected':''}>Asian</option>
+        <option value="Western" ${ms.cuisine==='Western'?'selected':''}>Western</option>
+      </select>
+    </div>
+    <button class="btn btn-primary btn-w" onclick="copyMealSuggestPrompt()">📋 Copy Prompt to Clipboard</button>
+  </div>`;
+
+  if (UI.mealSuggestInput.servings && UI.mealSuggestPasted !== undefined) {
+    html += `<div class="card" style="padding:14px;margin-top:12px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--primary-dark);">📥 Paste Claude's meal suggestions here:</div>
+      <textarea class="ft" id="msPaste" placeholder="Paste Claude's response here…" rows="5" oninput="UI.mealSuggestPasted=this.value">${escHtml(UI.mealSuggestPasted||'')}</textarea>
+      <button class="btn btn-accent btn-w mt8" onclick="parseMealSuggestions()">🍽 Show Suggestions</button>
+    </div>`;
+  }
+
+  if (UI.mealSuggestions) {
+    const ready = UI.mealSuggestions.filter(m=>m.readyToCook);
+    const almost = UI.mealSuggestions.filter(m=>!m.readyToCook);
+    html += `<div style="margin-top:12px">
+      <div class="sec-hdr">
+        <span class="sec-title">Suggestions</span>
+        <button class="btn btn-danger btn-sm" onclick="UI.mealSuggestions=null;UI.mealSuggestPasted='';renderApp()">✕ Clear</button>
+      </div>`;
+
+    if (ready.length) {
+      html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--success);margin-bottom:8px;">✅ Ready to Cook</div>`;
+      ready.forEach(m => {
+        html += `<div class="ms-card ready">
+          <div class="ms-name">${escHtml(m.name)}</div>
+          <div class="ms-desc">${escHtml(m.description||'')}</div>
+          <div class="ms-meta">
+            <span class="ms-badge ready">Ready</span>
+            ${m.cookTime ? `<span class="ms-badge time">⏱ ${escHtml(m.cookTime)}</span>` : ''}
+          </div>
+          <button class="btn btn-primary btn-sm btn-w" onclick="loadMealIntoRecipeChecker('${escHtml(m.name)}')">Check Ingredients →</button>
+        </div>`;
+      });
+    }
+
+    if (almost.length) {
+      html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--warning);margin-bottom:8px;margin-top:${ready.length?'12px':'0'};">🛒 Almost There</div>`;
+      almost.forEach(m => {
+        const missing = (m.missingIngredients||[]).join(', ');
+        html += `<div class="ms-card almost">
+          <div class="ms-name">${escHtml(m.name)}</div>
+          <div class="ms-desc">${escHtml(m.description||'')}</div>
+          <div class="ms-meta">
+            <span class="ms-badge almost">Almost</span>
+            ${m.cookTime ? `<span class="ms-badge time">⏱ ${escHtml(m.cookTime)}</span>` : ''}
+          </div>
+          ${missing ? `<div class="ms-missing">Missing: ${escHtml(missing)}</div>` : ''}
+          <button class="btn btn-secondary btn-sm btn-w" onclick="loadMealIntoRecipeChecker('${escHtml(m.name)}')">Check Ingredients →</button>
+        </div>`;
+      });
+    }
+    html += '</div>';
+  }
+
   return html;
 }
 
@@ -1147,7 +1245,76 @@ function loadSavedRecipe(id) {
   UI.recipePasted = '';
   UI.recipeResults = null;
   renderApp();
-  showToast(`Loaded: ${r.name}`);
+  showToast('Loaded: ' + r.name);
+}
+
+// ============================================================
+// MEAL SUGGESTIONS
+// ============================================================
+function copyMealSuggestPrompt() {
+  const servings = parseInt(document.getElementById('msServings').value) || 2;
+  const time = document.getElementById('msTime').value;
+  const cuisine = document.getElementById('msCuisine').value;
+  UI.mealSuggestInput = { servings, time, cuisine };
+
+  const timeLabel = { quick: '30 minutes or less', normal: 'about 1 hour', full: '2 hours or more' }[time] || '1 hour';
+  const cuisineLabel = cuisine === 'any' ? 'any cuisine' : cuisine + ' cuisine';
+
+  // Build pantry list — only in-stock items
+  const pantryLines = [];
+  D.pantry.forEach(function(item) {
+    if (totalQty(item) <= 0) return;
+    const total = formatItemTotal(item);
+    pantryLines.push('- ' + item.name + ' (' + total + ')');
+  });
+  const pantryText = pantryLines.length ? pantryLines.join('\n') : '(pantry is empty)';
+
+  const prompt = 'I have the following ingredients in my pantry:\n' + pantryText + '\n\n' +
+    'Please suggest exactly 3 meals I can cook for ' + servings + ' person' + (servings !== 1 ? 's' : '') + '. ' +
+    'Cook time should be ' + timeLabel + '. Cuisine: ' + cuisineLabel + '.\n\n' +
+    'For each meal, determine if it can be made entirely from my pantry (readyToCook: true) or needs a few extra ingredients (readyToCook: false).\n\n' +
+    'Respond ONLY with a valid JSON array. No explanation, no markdown fences. Format:\n' +
+    '[{"name":"Meal Name","description":"One sentence description","cookTime":"X minutes","readyToCook":true,"missingIngredients":[]},...]';
+
+  navigator.clipboard.writeText(prompt).then(function() {
+    showToast('Prompt copied! Paste in Claude.ai');
+    renderApp();
+  }).catch(function() {
+    showToast('Copy failed — please copy manually');
+  });
+}
+
+function parseMealSuggestions() {
+  const raw = (document.getElementById('msPaste') ? document.getElementById('msPaste').value : UI.mealSuggestPasted || '').trim();
+  if (!raw) { showToast('Please paste Claude\'s response first'); return; }
+  UI.mealSuggestPasted = raw;
+  try {
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    if (!Array.isArray(parsed) || !parsed.length) { showToast('Could not read suggestions — try again'); return; }
+    UI.mealSuggestions = parsed.slice(0, 3).map(function(m) {
+      return {
+        name: m.name || 'Unnamed meal',
+        description: m.description || '',
+        cookTime: m.cookTime || '',
+        readyToCook: m.readyToCook === true,
+        missingIngredients: Array.isArray(m.missingIngredients) ? m.missingIngredients : []
+      };
+    });
+    renderApp();
+  } catch(e) {
+    showToast('Could not parse response — make sure you pasted the full reply');
+  }
+}
+
+function loadMealIntoRecipeChecker(mealName) {
+  UI.recipeInput = { dish: mealName, notes: '' };
+  UI.recipePasted = '';
+  UI.recipeResults = null;
+  // Scroll to top of recipe section
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  renderApp();
+  showToast('Loaded: ' + mealName + ' — copy prompt to check ingredients');
 }
 
 // ============================================================
