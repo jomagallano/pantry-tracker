@@ -365,6 +365,7 @@ let UI = {
   hFilter: 'all',
   hSearch: '',
   pSearch: '',
+  pSearchTimer: null,
   pFilter: 'all',
   recipeResults: null,
   recipeInput: {dish:'', notes:''},
@@ -380,14 +381,38 @@ function catById(id) { return D.categories.find(c=>c.id===id) || {name:'Others',
 function catIcon(id) { return catById(id).icon || '📦'; }
 function catName(id) { return catById(id).name || 'Others'; }
 
+const CONTINUOUS_UNITS = ['g','kg','ml','l','tsp','tbsp','cup','cups','oz','lb','lbs'];
+function isContinuous(unit) { return CONTINUOUS_UNITS.indexOf((unit||'').toLowerCase()) !== -1; }
+
+// For continuous brands, quantity IS the remaining amount in native unit
+// For discrete brands, quantity is pack count
 function totalQty(item) { return item.brands.reduce((s,b)=>s+(b.quantity||0),0); }
 
 function totalPieces(item) {
-  return item.brands.reduce((s,b) => s + (b.quantity||0) * (b.packSize||1), 0);
+  // For continuous: quantity already in native unit, sum directly
+  // For discrete: quantity * packSize = total pieces
+  return item.brands.reduce((s,b) => {
+    if (isContinuous(b.packUnit)) return s + (b.quantity||0);
+    return s + (b.quantity||0) * (b.packSize||1);
+  }, 0);
+}
+
+function itemHasContinuousUnit(item) {
+  return item.brands.length > 0 && item.brands.every(b => isContinuous(b.packUnit));
+}
+
+function totalRemaining(item) {
+  // Returns total in native unit for continuous, total packs for discrete
+  if (itemHasContinuousUnit(item)) return item.brands.reduce((s,b)=>s+(b.quantity||0),0);
+  return totalQty(item);
 }
 
 function isLow(item) {
   if (isOut(item)) return false;
+  if (itemHasContinuousUnit(item)) {
+    const rem = totalRemaining(item);
+    return item.minStock > 0 && rem <= item.minStock;
+  }
   if (item.minStockUnit === 'pieces') {
     const pieces = totalPieces(item);
     return item.minStock > 0 && pieces <= item.minStock;
@@ -396,7 +421,47 @@ function isLow(item) {
   return item.minStock > 0 && qty <= item.minStock;
 }
 
-function isOut(item) { return totalQty(item) === 0; }
+function isOut(item) { return totalQty(item) <= 0; }
+
+// Format a continuous quantity with smart unit display
+function formatContinuousQty(amount, unit) {
+  const u = (unit||'').toLowerCase();
+  const rounded = Math.round(amount * 10) / 10; // 1 decimal
+  if (u === 'l' && amount < 1 && amount > 0) {
+    return Math.round(amount * 1000) + ' ml';
+  }
+  if (u === 'kg' && amount < 1 && amount > 0) {
+    return Math.round(amount * 1000) + ' g';
+  }
+  return rounded + ' ' + unit;
+}
+
+// Format brand stock for display
+function formatBrandQty(brand) {
+  if (isContinuous(brand.packUnit)) {
+    return formatContinuousQty(brand.quantity, brand.packUnit);
+  }
+  return formatPackQty(brand.quantity, brand.packSize, brand.packUnit);
+}
+
+// Format item-level total for header display
+function formatItemTotal(item) {
+  if (!item.brands.length) return '—';
+  if (itemHasContinuousUnit(item)) {
+    const allSameUnit = item.brands.every(b => b.packUnit === item.brands[0].packUnit);
+    if (allSameUnit) {
+      const total = item.brands.reduce((s,b)=>s+(b.quantity||0),0);
+      return formatContinuousQty(total, item.brands[0].packUnit);
+    }
+    // Mixed continuous units — show per brand
+    return item.brands.map(b => formatContinuousQty(b.quantity, b.packUnit)).join(' + ');
+  }
+  // Discrete — show total pieces if same unit
+  const allSameUnit = item.brands.every(b => b.packUnit === item.brands[0].packUnit);
+  const totalPcs = item.brands.reduce((s,b) => s + (b.quantity||0) * (b.packSize||1), 0);
+  if (allSameUnit) return Math.round(totalPcs) + ' ' + (item.brands[0].packUnit || 'pcs');
+  return totalPcs + ' pcs (mixed)';
+}
 
 function expiryStatus(brand, warnDays) {
   if (!brand.expiryDate) return null;
@@ -591,7 +656,7 @@ function renderPantry() {
     <button class="fp ${UI.pFilter==='expiring'?'active':''}" onclick="UI.pFilter='expiring';renderApp()">🕐 Use This Soon${expBadge}</button>
   </div>`;
 
-  html += `<div class="sbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Search pantry…" value="${escHtml(UI.pSearch)}" oninput="UI.pSearch=this.value;renderApp()" /></div>`;
+  html += `<div class="sbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Search pantry…" value="${escHtml(UI.pSearch)}" oninput="debouncePantrySearch(this.value)" /></div>`;
 
   // "Use This Soon" view
   if (UI.pFilter === 'expiring') {
@@ -661,14 +726,15 @@ function renderPantry() {
     <div class="card">`;
     items.forEach(item => {
       const qty = totalQty(item);
-      const pieces = totalPieces(item);
       const low = isLow(item);
       const out = isOut(item);
       const expanded = UI.expanded.has(item.id);
       const qtyClass = out ? 'zero' : (low ? 'low' : '');
       const byPieces = item.minStockUnit === 'pieces';
-      const stockDisplay = out ? '—' : byPieces ? pieces + ' pcs' : qty + ' packs';
-      const minDisplay = byPieces ? `min ${item.minStock} pcs` : `min ${item.minStock} packs`;
+      const stockDisplay = out ? '—' : formatItemTotal(item);
+      const minDisplay = itemHasContinuousUnit(item)
+        ? 'min ' + item.minStock + ' ' + (item.brands[0]?.packUnit || '')
+        : byPieces ? 'min ' + item.minStock + ' pcs' : 'min ' + item.minStock + ' packs';
 
       // Soonest expiry
       let soonestExp = null;
@@ -700,9 +766,9 @@ function renderPantry() {
               <div class="be-info">
                 <div class="be-name">${escHtml(b.brandName || 'No brand')}</div>
                 <div class="be-details">
-                  <span class="be-tag">${formatPackQty(b.quantity, b.packSize, b.packUnit)}</span>
-                  <span class="be-tag">${b.packSize}${b.packUnit}/pack</span>
-                  <span class="be-tag">${Math.round(b.quantity * b.packSize)} ${b.packUnit} total</span>
+                  <span class="be-tag">${formatBrandQty(b)}</span>
+                  ${!isContinuous(b.packUnit) ? `<span class="be-tag">${b.packSize}${b.packUnit}/pack</span>` : `<span class="be-tag">${b.packSize}${b.packUnit} original</span>`}
+                  ${!isContinuous(b.packUnit) ? `<span class="be-tag">${Math.round(b.quantity * b.packSize)} ${b.packUnit} total</span>` : ''}
                   ${b.price ? `<span class="be-tag">₱${b.price}/pack</span>` : ''}
                   ${np ? `<span class="be-tag price">₱${np.val}${np.label}</span>` : ''}
                   ${b.expiryDate ? `<span class="be-tag ${es==='expired'?'red':es==='expiring'?'warn':''}">${es==='expired'?'⚠ Expired':'Exp: '+formatDate(b.expiryDate)}</span>` : ''}
@@ -845,7 +911,10 @@ function renderRecipe() {
     html += `<div style="margin-top:12px">
       <div class="sec-hdr">
         <span class="sec-title">Results for: ${escHtml(dish)}</span>
-        <button class="btn btn-secondary btn-sm" onclick="saveCurrentRecipe()">💾 Save Recipe</button>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-secondary btn-sm" onclick="saveCurrentRecipe()">💾 Save</button>
+          <button class="btn btn-danger btn-sm" onclick="UI.recipeResults=null;UI.recipePasted='';renderApp()">✕ Clear</button>
+        </div>
       </div>
       <div class="card" style="padding:14px">`;
 
@@ -968,12 +1037,27 @@ function parseRecipe() {
   });
 
   const have = [], low = [], need = [];
+  // Words too generic to use for matching
+  const STOP_WORDS = new Set(['base','powder','sauce','mix','fresh','dried','ground','whole','raw',
+    'cooked','sliced','chopped','minced','crushed','peeled','diced','paste','extract',
+    'leaves','leaf','seed','seeds','flakes','pieces','piece','large','small','medium',
+    'ripe','frozen','canned','packed','thick','thin','boneless','skinless']);
+
   ingredients.forEach(ing => {
     const ingNameL = ing.name.toLowerCase().replace(/[()]/g,'').trim();
+    const ingWords = ingNameL.split(' ').filter(w => w.length > 2 && !STOP_WORDS.has(w));
+
     const match = D.pantry.find(p => {
       const pL = p.name.toLowerCase();
-      return pL.includes(ingNameL) || ingNameL.includes(pL) ||
-        ingNameL.split(' ').some(w => w.length > 3 && pL.includes(w));
+      // Exact or substring match — most reliable
+      if (pL === ingNameL || pL.includes(ingNameL) || ingNameL.includes(pL)) return true;
+      // Word match — only allow if the first meaningful content word matches
+      // This prevents "powder" matching "chili powder" when looking for "tamarind base powder"
+      if (ingWords.length > 0) {
+        const firstWord = ingWords[0];
+        if (firstWord.length > 3 && pL.includes(firstWord)) return true;
+      }
+      return false;
     });
 
     // Format display qty — show original fractions if possible
@@ -1272,13 +1356,16 @@ function submitAddBrand(itemId) {
   const item = D.pantry.find(i=>i.id===itemId);
   if (!item) return;
   const packSize = parseFloat(document.getElementById('bPackSize').value);
-  const qty = parseInt(document.getElementById('bQty').value);
+  const qty = parseFloat(document.getElementById('bQty').value);
+  const packUnit = document.getElementById('bUnit').value;
   if (!packSize || !qty) { showToast('Pack size and quantity required'); return; }
+  // For continuous units, store total amount in native unit
+  const storedQty = isContinuous(packUnit) ? qty * packSize : qty;
   const brand = {
     id: uid(),
     brandName: document.getElementById('bName').value.trim(),
-    packSize, packUnit: document.getElementById('bUnit').value,
-    quantity: qty,
+    packSize, packUnit,
+    quantity: storedQty,
     price: parseFloat(document.getElementById('bPrice').value)||0,
     expiryDate: document.getElementById('bExpiry').value || null,
   };
@@ -1293,6 +1380,10 @@ function openEditBrandModal(itemId, brandId) {
   const brand = item?.brands.find(b=>b.id===brandId);
   if (!brand) return;
   const unitOpts = D.units.map(u=>`<option ${u===brand.packUnit?'selected':''}>${u}</option>`).join('');
+  const cont = isContinuous(brand.packUnit);
+  // For continuous: show current remaining; for discrete: show pack count
+  const qtyLabel = cont ? 'Current Remaining (' + brand.packUnit + ')' : 'Qty Owned (packs) *';
+  const qtyVal = cont ? (Math.round(brand.quantity * 10) / 10) : brand.quantity;
   openModal(`
     <div class="mhdr"><div class="mtitle">Edit Stock — ${escHtml(item.name)}</div><button class="btn-icon" onclick="closeModal()">✕</button></div>
     <div class="fg"><label class="fl">Brand Name</label><input class="fi" id="ebName" value="${escHtml(brand.brandName||'')}"></div>
@@ -1301,7 +1392,7 @@ function openEditBrandModal(itemId, brandId) {
       <div class="fg"><label class="fl">Unit *</label><select class="fs" id="ebUnit">${unitOpts}</select></div>
     </div>
     <div class="fr2">
-      <div class="fg"><label class="fl">Qty Owned *</label><input class="fi" id="ebQty" type="number" value="${brand.quantity}"></div>
+      <div class="fg"><label class="fl">${qtyLabel}</label><input class="fi" id="ebQty" type="number" step="any" value="${qtyVal}"></div>
       <div class="fg"><label class="fl">Price per Pack (₱)</label><input class="fi" id="ebPrice" type="number" step="any" value="${brand.price||''}"></div>
     </div>
     <div class="fg"><label class="fl">Expiry Date</label><input class="fi" id="ebExpiry" type="date" value="${brand.expiryDate||''}"></div>
@@ -1316,7 +1407,9 @@ function submitEditBrand(itemId, brandId) {
   brand.brandName = document.getElementById('ebName').value.trim();
   brand.packSize = parseFloat(document.getElementById('ebPackSize').value)||brand.packSize;
   brand.packUnit = document.getElementById('ebUnit').value;
-  brand.quantity = parseInt(document.getElementById('ebQty').value)||0;
+  const inputQty = parseFloat(document.getElementById('ebQty').value)||0;
+  // For continuous: user edits remaining directly in native unit; for discrete: pack count
+  brand.quantity = inputQty;
   brand.price = parseFloat(document.getElementById('ebPrice').value)||0;
   brand.expiryDate = document.getElementById('ebExpiry').value || null;
   markChange(); closeModal(); renderApp(); showToast('✅ Updated');
@@ -1341,85 +1434,91 @@ function openConsumeModal(itemId, suggestBrandId) {
     return new Date(a.expiryDate) - new Date(b.expiryDate);
   });
   const brandOpts = sorted.map(b => {
-    const exp = b.expiryDate ? ` (exp: ${formatDate(b.expiryDate)})` : '';
-    const oldest = sorted[0].id === b.id ? ' ⬅ oldest' : '';
-    const display = formatPackQty(b.quantity, b.packSize, b.packUnit);
-    return `<option value="${b.id}" ${b.id===sorted[0].id?'selected':''}>${escHtml(b.brandName||'No brand')} — ${display}${exp}${oldest}</option>`;
+    const exp = b.expiryDate ? ' (exp: ' + formatDate(b.expiryDate) + ')' : '';
+    const oldest = sorted[0].id === b.id ? ' \u2190 oldest' : '';
+    return '<option value="' + b.id + '" ' + (b.id===sorted[0].id?'selected':'') + '>' + escHtml(b.brandName||'No brand') + ' \u2014 ' + formatBrandQty(b) + exp + oldest + '</option>';
   }).join('');
   const firstBrand = sorted[0];
-  openModal(`
-    <div class="mhdr"><div class="mtitle">Consume — ${escHtml(item.name)}</div><button class="btn-icon" onclick="closeModal()">✕</button></div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">App suggests the oldest stock first.</div>
-    <div class="fg"><label class="fl">Brand / Stock</label><select class="fs" id="conBrand" onchange="updateConsumeUnit('${itemId}')">${brandOpts}</select></div>
-    <div class="fg">
-      <label class="fl">Consume By</label>
-      <div style="display:flex;gap:8px;">
-        <select class="fs" id="conByUnit" style="flex:1" onchange="updateConsumeHint('${itemId}')">
-          <option value="packs">Packs</option>
-          <option value="pieces">Pieces (${firstBrand.packUnit||'pcs'})</option>
-        </select>
-      </div>
-    </div>
-    <div class="fg">
-      <label class="fl">Quantity Used *</label>
-      <input class="fi" id="conQty" type="number" min="0.01" step="any" placeholder="1" value="1" oninput="updateConsumeHint('${itemId}')">
-      <div id="conHint" style="font-size:11px;color:var(--text-muted);margin-top:4px;"></div>
-    </div>
-    <button class="btn btn-accent btn-w" onclick="submitConsume('${itemId}')">Log Consumption</button>
-  `);
+  const cont = isContinuous(firstBrand.packUnit);
+  const consumeBySection = cont
+    ? '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Entering in <strong>' + firstBrand.packUnit + '</strong></div>'
+    : '<div class="fg"><label class="fl">Consume By</label><select class="fs" id="conByUnit" onchange="updateConsumeHint(\'' + itemId + '\')"><option value="packs">Packs</option><option value="pieces">Pieces (' + (firstBrand.packUnit||'pcs') + ')</option></select></div>';
+  openModal(
+    '<div class="mhdr"><div class="mtitle">Consume \u2014 ' + escHtml(item.name) + '</div><button class="btn-icon" onclick="closeModal()">\u2715</button></div>' +
+    '<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">App suggests the oldest stock first.</div>' +
+    '<div class="fg"><label class="fl">Brand / Stock</label><select class="fs" id="conBrand" onchange="updateConsumeUnit(\'' + itemId + '\')">' + brandOpts + '</select></div>' +
+    consumeBySection +
+    '<div class="fg"><label class="fl">Quantity Used ' + (cont ? '(' + firstBrand.packUnit + ')' : '') + ' *</label>' +
+    '<input class="fi" id="conQty" type="number" min="0.01" step="any" placeholder="1" value="1" oninput="updateConsumeHint(\'' + itemId + '\')">' +
+    '<div id="conHint" style="font-size:11px;color:var(--text-muted);margin-top:4px;"></div></div>' +
+    '<button class="btn btn-accent btn-w" onclick="submitConsume(\'' + itemId + '\')">Log Consumption</button>'
+  );
 }
 
-function updateConsumeUnit(itemId) {
-  updateConsumeHint(itemId);
-}
+function updateConsumeUnit(itemId) { updateConsumeHint(itemId); }
 
 function updateConsumeHint(itemId) {
   const item = D.pantry.find(i=>i.id===itemId);
-  const brandId = document.getElementById('conBrand')?.value;
-  const brand = item?.brands.find(b=>b.id===brandId);
-  const byUnit = document.getElementById('conByUnit')?.value;
-  const qty = parseFloat(document.getElementById('conQty')?.value)||0;
+  const brandId = document.getElementById('conBrand') ? document.getElementById('conBrand').value : null;
+  const brand = brandId ? item.brands.find(b=>b.id===brandId) : null;
+  const qty = parseFloat(document.getElementById('conQty') ? document.getElementById('conQty').value : 0)||0;
   const hint = document.getElementById('conHint');
   if (!brand || !hint) return;
-  if (byUnit === 'pieces') {
-    const totalPcs = Math.round(brand.quantity * brand.packSize);
-    const remaining = Math.round(totalPcs - qty);
-    hint.textContent = `You have ${totalPcs} ${brand.packUnit||'pcs'} available. After: ${Math.max(0,remaining)} ${brand.packUnit||'pcs'} left.`;
+  const cont = isContinuous(brand.packUnit);
+  if (cont) {
+    const remaining = brand.quantity - qty;
+    hint.textContent = 'Available: ' + formatContinuousQty(brand.quantity, brand.packUnit) + '. After: ' + (remaining >= 0 ? formatContinuousQty(remaining, brand.packUnit) : 'over limit');
     hint.style.color = remaining < 0 ? 'var(--danger)' : 'var(--text-muted)';
   } else {
-    const remaining = brand.quantity - qty;
-    hint.textContent = `You have ${formatPackQty(brand.quantity, brand.packSize, brand.packUnit)} available. After: ${remaining >= 0 ? formatPackQty(remaining, brand.packSize, brand.packUnit) : 'over limit'}.`;
-    hint.style.color = remaining < 0 ? 'var(--danger)' : 'var(--text-muted)';
+    const byUnitEl = document.getElementById('conByUnit');
+    const byUnit = byUnitEl ? byUnitEl.value : 'packs';
+    if (byUnit === 'pieces') {
+      const totalPcs = Math.round(brand.quantity * brand.packSize);
+      const remaining = Math.round(totalPcs - qty);
+      hint.textContent = 'Available: ' + totalPcs + ' ' + (brand.packUnit||'pcs') + '. After: ' + Math.max(0,remaining) + ' ' + (brand.packUnit||'pcs');
+      hint.style.color = remaining < 0 ? 'var(--danger)' : 'var(--text-muted)';
+    } else {
+      const remaining = brand.quantity - qty;
+      hint.textContent = 'Available: ' + formatPackQty(brand.quantity, brand.packSize, brand.packUnit) + '. After: ' + (remaining >= 0 ? formatPackQty(remaining, brand.packSize, brand.packUnit) : 'over limit');
+      hint.style.color = remaining < 0 ? 'var(--danger)' : 'var(--text-muted)';
+    }
   }
 }
 
 function submitConsume(itemId) {
   const item = D.pantry.find(i=>i.id===itemId);
   const brandId = document.getElementById('conBrand').value;
-  const brand = item?.brands.find(b=>b.id===brandId);
+  const brand = item ? item.brands.find(b=>b.id===brandId) : null;
   if (!brand) return;
-  const byUnit = document.getElementById('conByUnit').value;
   const qty = parseFloat(document.getElementById('conQty').value)||0;
   if (!qty || qty <= 0) { showToast('Enter a valid quantity'); return; }
+  const cont = isContinuous(brand.packUnit);
 
-  let packsToDeduct, historyQty, historyUnit;
+  var amountToDeduct, historyQty, historyUnit;
 
-  if (byUnit === 'pieces') {
-    const totalPcs = brand.quantity * brand.packSize;
-    if (qty > totalPcs) { showToast(`Only ${Math.round(totalPcs)} ${brand.packUnit||'pcs'} available`); return; }
-    packsToDeduct = qty / brand.packSize;
+  if (cont) {
+    if (qty > brand.quantity) { showToast('Only ' + formatContinuousQty(brand.quantity, brand.packUnit) + ' available'); return; }
+    amountToDeduct = qty;
     historyQty = qty;
-    historyUnit = brand.packUnit || 'pcs';
+    historyUnit = brand.packUnit;
   } else {
-    if (qty > brand.quantity) { showToast(`Only ${formatPackQty(brand.quantity, brand.packSize, brand.packUnit)} available`); return; }
-    packsToDeduct = qty;
-    historyQty = qty;
-    historyUnit = 'packs';
+    const byUnitEl = document.getElementById('conByUnit');
+    const byUnit = byUnitEl ? byUnitEl.value : 'packs';
+    if (byUnit === 'pieces') {
+      const totalPcs = brand.quantity * brand.packSize;
+      if (qty > totalPcs) { showToast('Only ' + Math.round(totalPcs) + ' ' + (brand.packUnit||'pcs') + ' available'); return; }
+      amountToDeduct = qty / brand.packSize;
+      historyQty = qty;
+      historyUnit = brand.packUnit || 'pcs';
+    } else {
+      if (qty > brand.quantity) { showToast('Only ' + formatPackQty(brand.quantity, brand.packSize, brand.packUnit) + ' available'); return; }
+      amountToDeduct = qty;
+      historyQty = qty;
+      historyUnit = 'packs';
+    }
   }
 
-  brand.quantity -= packsToDeduct;
-  // Round to avoid floating point noise
-  brand.quantity = Math.round(brand.quantity * 10000) / 10000;
+  brand.quantity = Math.round((brand.quantity - amountToDeduct) * 10000) / 10000;
 
   D.history.push({
     id: uid(), type: 'consumption', date: Date.now(),
@@ -1428,16 +1527,16 @@ function submitConsume(itemId) {
     category: catName(item.categoryId)
   });
 
-  // Remove brand if fully depleted
   if (brand.quantity <= 0) {
     item.brands = item.brands.filter(b=>b.id!==brandId);
     markChange(); closeModal(); renderApp();
-    showToast(`✅ Logged — stock depleted`);
+    showToast('Logged \u2014 stock depleted');
     checkAutoSuggestions();
     return;
   }
 
-  const threshold = (item.lowRemainPercent != null ? item.lowRemainPercent : 25) / 100;
+  const pct = (item.lowRemainPercent != null ? item.lowRemainPercent : 25) / 100;
+  const threshold = cont ? pct * brand.packSize : pct;
   const hitThreshold = brand.quantity <= threshold;
   if (hitThreshold) {
     const alreadyOnList = D.shopping.find(s => s.pantryItemId===item.id && s.source==='low-stock');
@@ -1451,7 +1550,7 @@ function submitConsume(itemId) {
   }
 
   markChange(); closeModal();
-  showToast(hitThreshold ? `⚠️ Running low — added to shopping list` : `✅ Logged ${historyQty} ${historyUnit} consumed`);
+  showToast(hitThreshold ? 'Running low \u2014 added to shopping list' : 'Logged ' + historyQty + ' ' + historyUnit + ' consumed');
   renderApp();
   checkAutoSuggestions();
 }
@@ -1542,11 +1641,13 @@ function submitDoneShopping() {
     // Find or add brand
     const existingBrand = item.brands.find(b => b.brandName.toLowerCase()===(brandName||'').toLowerCase() && b.packUnit===packUnit);
     if (existingBrand) {
-      existingBrand.quantity += qty;
+      // For continuous: add native unit amount; for discrete: add pack count
+      existingBrand.quantity += isContinuous(packUnit) ? qty * packSize : qty;
       if (expiryDate) existingBrand.expiryDate = expiryDate;
       if (price) existingBrand.price = price;
     } else {
-      item.brands.push({ id:uid(), brandName, packSize, packUnit, quantity:qty, price, expiryDate });
+      const storedQty = isContinuous(packUnit) ? qty * packSize : qty;
+      item.brands.push({ id:uid(), brandName, packSize, packUnit, quantity:storedQty, price, expiryDate });
     }
     // Log to history
     D.history.push({ id:uid(), type:'purchase', date:Date.now(), itemName:s.itemName, brandName, quantity:qty, unit:packUnit, price, category:s.category });
@@ -1596,6 +1697,12 @@ function clearAllData() {
 // ============================================================
 // MISC
 // ============================================================
+function debouncePantrySearch(val) {
+  UI.pSearch = val;
+  if (UI.pSearchTimer) clearTimeout(UI.pSearchTimer);
+  UI.pSearchTimer = setTimeout(function() { renderApp(); }, 300);
+}
+
 function switchTab(t) { UI.tab = t; UI.pSearch=''; UI.hSearch=''; UI.pFilter='all'; renderApp(); }
 
 function escHtml(s) {
