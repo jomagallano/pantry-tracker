@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PantryTracker</title>
+<title>PantryTrack</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -268,16 +268,16 @@ const DEFAULT_CATEGORIES = [
 const DEFAULT_UNITS = ['pcs','bottles','sachets','packs','cans','boxes','bags','g','kg','ml','L','tbsp','tsp','cups'];
 
 const DEFAULT_PANTRY = [
-  {id:'dp1',name:'Chicken',categoryId:'cat_proteins',minStock:1,expiryWarnDays:3,brands:[]},
-  {id:'dp2',name:'Eggs',categoryId:'cat_proteins',minStock:6,expiryWarnDays:7,brands:[]},
-  {id:'dp3',name:'Pork',categoryId:'cat_proteins',minStock:1,expiryWarnDays:3,brands:[]},
-  {id:'dp4',name:'Garlic',categoryId:'cat_veg',minStock:1,expiryWarnDays:14,brands:[]},
-  {id:'dp5',name:'Onion',categoryId:'cat_veg',minStock:2,expiryWarnDays:14,brands:[]},
-  {id:'dp6',name:'Rice',categoryId:'cat_dry',minStock:2,expiryWarnDays:180,brands:[]},
-  {id:'dp7',name:'Cooking Oil',categoryId:'cat_condiments',minStock:1,expiryWarnDays:30,brands:[]},
-  {id:'dp8',name:'Soy Sauce',categoryId:'cat_condiments',minStock:1,expiryWarnDays:90,brands:[]},
-  {id:'dp9',name:'Vinegar',categoryId:'cat_condiments',minStock:1,expiryWarnDays:90,brands:[]},
-  {id:'dp10',name:'Fish Sauce (Patis)',categoryId:'cat_condiments',minStock:1,expiryWarnDays:90,brands:[]},
+  {id:'dp1',name:'Chicken',categoryId:'cat_proteins',minStock:1,minStockUnit:'packs',expiryWarnDays:3,lowRemainPercent:25,brands:[]},
+  {id:'dp2',name:'Eggs',categoryId:'cat_proteins',minStock:6,minStockUnit:'pieces',expiryWarnDays:7,lowRemainPercent:25,brands:[]},
+  {id:'dp3',name:'Pork',categoryId:'cat_proteins',minStock:1,minStockUnit:'packs',expiryWarnDays:3,lowRemainPercent:25,brands:[]},
+  {id:'dp4',name:'Garlic',categoryId:'cat_veg',minStock:1,minStockUnit:'packs',expiryWarnDays:14,lowRemainPercent:25,brands:[]},
+  {id:'dp5',name:'Onion',categoryId:'cat_veg',minStock:2,minStockUnit:'pieces',expiryWarnDays:14,lowRemainPercent:25,brands:[]},
+  {id:'dp6',name:'Rice',categoryId:'cat_dry',minStock:2,minStockUnit:'packs',expiryWarnDays:180,lowRemainPercent:25,brands:[]},
+  {id:'dp7',name:'Cooking Oil',categoryId:'cat_condiments',minStock:1,minStockUnit:'packs',expiryWarnDays:30,lowRemainPercent:25,brands:[]},
+  {id:'dp8',name:'Soy Sauce',categoryId:'cat_condiments',minStock:1,minStockUnit:'packs',expiryWarnDays:90,lowRemainPercent:25,brands:[]},
+  {id:'dp9',name:'Vinegar',categoryId:'cat_condiments',minStock:1,minStockUnit:'packs',expiryWarnDays:90,lowRemainPercent:25,brands:[]},
+  {id:'dp10',name:'Fish Sauce (Patis)',categoryId:'cat_condiments',minStock:1,minStockUnit:'packs',expiryWarnDays:90,lowRemainPercent:25,brands:[]},
 ];
 
 // ============================================================
@@ -365,6 +365,7 @@ let UI = {
   hFilter: 'all',
   hSearch: '',
   pSearch: '',
+  pFilter: 'all',
   recipeResults: null,
   recipeInput: {dish:'', notes:''},
   recipePasted: '',
@@ -381,9 +382,18 @@ function catName(id) { return catById(id).name || 'Others'; }
 
 function totalQty(item) { return item.brands.reduce((s,b)=>s+(b.quantity||0),0); }
 
+function totalPieces(item) {
+  return item.brands.reduce((s,b) => s + (b.quantity||0) * (b.packSize||1), 0);
+}
+
 function isLow(item) {
+  if (isOut(item)) return false;
+  if (item.minStockUnit === 'pieces') {
+    const pieces = totalPieces(item);
+    return item.minStock > 0 && pieces <= item.minStock;
+  }
   const qty = totalQty(item);
-  return qty > 0 && item.minStock > 0 && qty <= item.minStock;
+  return item.minStock > 0 && qty <= item.minStock;
 }
 
 function isOut(item) { return totalQty(item) === 0; }
@@ -423,6 +433,16 @@ function normalizedPrice(price, packSize, packUnit) {
   return { val: val.toFixed(2), label };
 }
 
+function formatPackQty(quantity, packSize, packUnit) {
+  if (!packSize || packSize <= 0) return quantity + ' packs';
+  const fullPacks = Math.floor(quantity);
+  const leftoverPieces = Math.round((quantity - fullPacks) * packSize);
+  if (leftoverPieces === 0) return fullPacks + ' pack' + (fullPacks !== 1 ? 's' : '');
+  if (fullPacks === 0) return leftoverPieces + ' ' + (packUnit || 'pcs') + ' left';
+  return fullPacks + ' pack' + (fullPacks !== 1 ? 's' : '') + ' · ' + leftoverPieces + ' ' + (packUnit || 'pcs') + ' left';
+}
+
+
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -452,10 +472,8 @@ function closeModal() { document.getElementById('mo').classList.remove('open'); 
 function handleMoClick(e) { if (e.target.id==='mo') closeModal(); }
 
 function checkAutoSuggestions() {
-  // Low stock
   D.pantry.forEach(item => {
-    const qty = totalQty(item);
-    const isLowStock = qty > 0 && item.minStock > 0 && qty <= item.minStock;
+    const isLowStock = isLow(item);
     const alreadyAdded = D.shopping.find(s => s.pantryItemId === item.id && (s.source==='low-stock'||s.source==='expiring'));
     if (isLowStock && !alreadyAdded) {
       D.shopping.push({
@@ -490,7 +508,7 @@ function renderHeader() {
   const tabNames = {pantry:'Pantry',shopping:'Shopping List',recipe:'Recipe Checker',history:'History',settings:'Settings'};
   return `<div class="hdr">
     <div>
-      <div class="hdr-title">🥫 PantryTracker</div>
+      <div class="hdr-title">🥫 PantryTrack</div>
       <div class="hdr-sub">${tabNames[UI.tab] || ''}</div>
     </div>
     <div class="hdr-right">
@@ -559,14 +577,80 @@ function renderPantry() {
     else groups['__uncategorized'].push(item);
   });
 
-  // Search filter
   const q = (UI.pSearch || '').toLowerCase();
 
-  let html = `<div class="sbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Search pantry…" value="${escHtml(UI.pSearch)}" oninput="UI.pSearch=this.value;renderApp()" /></div>`;
+  // Count expiring items for badge
+  const expiringItems = D.pantry.filter(item =>
+    item.brands.some(b => { const es = expiryStatus(b, item.expiryWarnDays); return es === 'expiring' || es === 'expired'; })
+  );
+  const expBadge = expiringItems.length ? ` <span style="background:var(--danger);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;">${expiringItems.length}</span>` : '';
 
+  let html = `<div class="fpills">
+    <button class="fp ${UI.pFilter==='all'?'active':''}" onclick="UI.pFilter='all';renderApp()">All</button>
+    <button class="fp ${UI.pFilter==='low'?'active':''}" onclick="UI.pFilter='low';renderApp()">⚠️ Low Stock</button>
+    <button class="fp ${UI.pFilter==='expiring'?'active':''}" onclick="UI.pFilter='expiring';renderApp()">🕐 Use This Soon${expBadge}</button>
+  </div>`;
+
+  html += `<div class="sbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Search pantry…" value="${escHtml(UI.pSearch)}" oninput="UI.pSearch=this.value;renderApp()" /></div>`;
+
+  // "Use This Soon" view
+  if (UI.pFilter === 'expiring') {
+    const items = D.pantry.filter(item =>
+      item.brands.some(b => { const es = expiryStatus(b, item.expiryWarnDays); return es === 'expiring' || es === 'expired'; })
+    ).filter(item => !q || item.name.toLowerCase().includes(q));
+
+    // Flatten to brand-level entries sorted by expiry urgency
+    const entries = [];
+    items.forEach(item => {
+      item.brands.forEach(b => {
+        const es = expiryStatus(b, item.expiryWarnDays);
+        if (es === 'expiring' || es === 'expired') {
+          entries.push({ item, brand: b, status: es });
+        }
+      });
+    });
+    entries.sort((a,b) => {
+      if (a.status === 'expired' && b.status !== 'expired') return -1;
+      if (b.status === 'expired' && a.status !== 'expired') return 1;
+      return new Date(a.brand.expiryDate) - new Date(b.brand.expiryDate);
+    });
+
+    if (!entries.length) {
+      html += `<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Nothing expiring soon.<br>All good!</div></div>`;
+      return html;
+    }
+
+    html += `<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;padding:0 2px;">Consume these first — sorted by urgency.</div>
+    <div class="card">`;
+    entries.forEach(({ item, brand, status }) => {
+      const isExp = status === 'expired';
+      const now = new Date(); now.setHours(0,0,0,0);
+      const exp = new Date(brand.expiryDate + 'T00:00:00');
+      const diff = Math.floor((exp - now) / 86400000);
+      const urgencyLabel = isExp ? `Expired ${Math.abs(diff)}d ago` : diff === 0 ? 'Expires today!' : `Expires in ${diff}d`;
+      html += `<div class="pi-border">
+        <div class="pi-row" onclick="openConsumeModal('${item.id}','${brand.id}')">
+          <div class="pi-icon" style="background:${isExp?'var(--danger-light)':'var(--warning-light)'}">${catIcon(item.categoryId)}</div>
+          <div class="pi-info">
+            <div class="pi-name">${escHtml(item.name)}</div>
+            <div class="pi-meta">${escHtml(brand.brandName||'No brand')} · ${brand.quantity} ${brand.packUnit||'pcs'}</div>
+          </div>
+          <div class="pi-right">
+            <div style="font-size:11px;font-weight:700;color:${isExp?'var(--danger)':'var(--warning)'};">${urgencyLabel}</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Tap to consume</div>
+          </div>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+    return html;
+  }
+
+  // "Low Stock" filter
   let anyItem = false;
   D.categories.forEach(cat => {
     let items = groups[cat.id] || [];
+    if (UI.pFilter === 'low') items = items.filter(i => isLow(i));
     if (q) items = items.filter(i => i.name.toLowerCase().includes(q));
     if (!items.length) return;
     anyItem = true;
@@ -577,11 +661,14 @@ function renderPantry() {
     <div class="card">`;
     items.forEach(item => {
       const qty = totalQty(item);
+      const pieces = totalPieces(item);
       const low = isLow(item);
       const out = isOut(item);
       const expanded = UI.expanded.has(item.id);
       const qtyClass = out ? 'zero' : (low ? 'low' : '');
-      const qtyLabel = out ? 'Out of stock' : qty + ' ' + (item.brands[0]?.packUnit || 'units');
+      const byPieces = item.minStockUnit === 'pieces';
+      const stockDisplay = out ? '—' : byPieces ? pieces + ' pcs' : qty + ' packs';
+      const minDisplay = byPieces ? `min ${item.minStock} pcs` : `min ${item.minStock} packs`;
 
       // Soonest expiry
       let soonestExp = null;
@@ -597,10 +684,10 @@ function renderPantry() {
           <div class="pi-icon ${out?'grey':''}">${catIcon(item.categoryId)}</div>
           <div class="pi-info">
             <div class="pi-name">${escHtml(item.name)}</div>
-            <div class="pi-meta">${item.brands.length} brand${item.brands.length!==1?'s':''} · min ${item.minStock}</div>
+            <div class="pi-meta">${item.brands.length} brand${item.brands.length!==1?'s':''} · ${minDisplay}</div>
           </div>
           <div class="pi-right">
-            <div class="pi-qty ${qtyClass}">${out ? '—' : qty}</div>
+            <div class="pi-qty ${qtyClass}">${stockDisplay}</div>
             ${soonestExp ? `<div class="pi-exp ${soonestExp.status==='expired'?'red':'warn'}">${soonestExp.status==='expired'?'Expired':'Exp soon'}</div>` : ''}
           </div>
           <svg class="pi-chevron ${expanded?'open':''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:16px;height:16px;stroke-width:2;flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>
@@ -613,8 +700,9 @@ function renderPantry() {
               <div class="be-info">
                 <div class="be-name">${escHtml(b.brandName || 'No brand')}</div>
                 <div class="be-details">
-                  <span class="be-tag">${b.quantity} ${b.packUnit||'pcs'}</span>
+                  <span class="be-tag">${formatPackQty(b.quantity, b.packSize, b.packUnit)}</span>
                   <span class="be-tag">${b.packSize}${b.packUnit}/pack</span>
+                  <span class="be-tag">${Math.round(b.quantity * b.packSize)} ${b.packUnit} total</span>
                   ${b.price ? `<span class="be-tag">₱${b.price}/pack</span>` : ''}
                   ${np ? `<span class="be-tag price">₱${np.val}${np.label}</span>` : ''}
                   ${b.expiryDate ? `<span class="be-tag ${es==='expired'?'red':es==='expiring'?'warn':''}">${es==='expired'?'⚠ Expired':'Exp: '+formatDate(b.expiryDate)}</span>` : ''}
@@ -638,7 +726,9 @@ function renderPantry() {
     html += '</div>';
   });
 
-  if (!anyItem && !q) {
+  if (!anyItem && UI.pFilter === 'low') {
+    html += `<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">No low stock items right now.</div></div>`;
+  } else if (!anyItem && !q) {
     html += `<div class="empty"><div class="empty-icon">🥫</div><div class="empty-text">No items yet.<br>Tap + to add your first pantry item.</div></div>`;
   } else if (!anyItem && q) {
     html += `<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">No items match "${escHtml(q)}"</div></div>`;
@@ -768,13 +858,15 @@ function renderRecipe() {
     if (low.length) {
       html += `<hr class="div"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--warning);margin-bottom:6px;">⚠️ Low Stock (${low.length})</div>`;
       low.forEach(r => {
-        html += `<div class="ri"><div class="ri-dot low"></div><div class="ri-info"><div class="ri-name">${escHtml(r.name)}</div><div class="ri-qty">${r.qtyStr} — Only ${r.pantryQty} left</div></div><button class="btn btn-warning btn-xs" onclick="addRecipeItemToShopping('${escHtml(r.name)}','${escHtml(dish)}')">Add</button></div>`;
+        const isAdded = UI.recipeResults.added?.has(r.name.toLowerCase());
+        html += `<div class="ri"><div class="ri-dot low"></div><div class="ri-info"><div class="ri-name" style="${isAdded?'text-decoration:line-through;color:var(--text-light);':''}">${escHtml(r.name)}</div><div class="ri-qty">${r.qtyStr} — Only ${r.pantryQty} left</div></div>${isAdded?'<span class="ri-status have">Added ✓</span>':`<button class="btn btn-warning btn-xs" onclick="addRecipeItemToShopping('${escHtml(r.name)}','${escHtml(dish)}')">Add</button>`}</div>`;
       });
     }
     if (need.length) {
       html += `<hr class="div"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--danger);margin-bottom:6px;">❌ Need to Buy (${need.length})</div>`;
       need.forEach(r => {
-        html += `<div class="ri"><div class="ri-dot need"></div><div class="ri-info"><div class="ri-name">${escHtml(r.name)}</div><div class="ri-qty">${r.qtyStr}</div></div><button class="btn btn-danger btn-xs" onclick="addRecipeItemToShopping('${escHtml(r.name)}','${escHtml(dish)}')">Add</button></div>`;
+        const isAdded = UI.recipeResults.added?.has(r.name.toLowerCase());
+        html += `<div class="ri"><div class="ri-dot need"></div><div class="ri-info"><div class="ri-name" style="${isAdded?'text-decoration:line-through;color:var(--text-light);':''}">${escHtml(r.name)}</div><div class="ri-qty">${r.qtyStr}</div></div>${isAdded?'<span class="ri-status have">Added ✓</span>':`<button class="btn btn-danger btn-xs" onclick="addRecipeItemToShopping('${escHtml(r.name)}','${escHtml(dish)}')">Add</button>`}</div>`;
       });
     }
     if (need.length > 1 || low.length > 1) {
@@ -811,46 +903,110 @@ function copyRecipePrompt() {
   });
 }
 
+// FIX 1: Convert fractions in ingredient text before parsing
+function resolveFractions(str) {
+  // Mixed fractions: "1 1/2" → "1.5"
+  str = str.replace(/(\d+)\s+(\d+)\/(\d+)/g, (_, w, n, d) =>
+    (parseInt(w) + parseInt(n) / parseInt(d)).toFixed(4).replace(/\.?0+$/, '')
+  );
+  // Simple fractions: "1/2" → "0.5"
+  str = str.replace(/\b(\d+)\/(\d+)\b/g, (_, n, d) =>
+    (parseInt(n) / parseInt(d)).toFixed(4).replace(/\.?0+$/, '')
+  );
+  return str;
+}
+
+// FIX 3: Convert recipe qty to pantry unit for comparison
+const UNIT_TO_G  = {g:1,kg:1000,oz:28.35,lb:453.6,lbs:453.6};
+const UNIT_TO_ML = {ml:1,l:1000,tsp:4.93,tbsp:14.79,cup:236.6,cups:236.6};
+function sameFamily(u1, u2) {
+  const inG  = u => u in UNIT_TO_G;
+  const inML = u => u in UNIT_TO_ML;
+  return (inG(u1) && inG(u2)) || (inML(u1) && inML(u2));
+}
+function toBase(qty, unit) {
+  const u = (unit||'').toLowerCase();
+  if (u in UNIT_TO_G)  return qty * UNIT_TO_G[u];
+  if (u in UNIT_TO_ML) return qty * UNIT_TO_ML[u];
+  return qty; // countable — treat as-is
+}
+function pantryHasEnough(match, recipeQty, recipeUnit) {
+  // Total pieces approach for piece-tracked items
+  const pantryUnit = (match.brands[0]?.packUnit || '').toLowerCase();
+  const recU = (recipeUnit||'').toLowerCase();
+  if (!recipeQty || !recipeUnit) return true; // can't compare, assume ok
+  if (sameFamily(recU, pantryUnit)) {
+    const recipeBase = toBase(recipeQty, recU);
+    const pantryBase = toBase(totalPieces(match), pantryUnit);
+    return pantryBase >= recipeBase;
+  }
+  return true; // different families — can't compare, don't flag
+}
+
 function parseRecipe() {
-  const text = (document.getElementById('rPaste')?.value || UI.recipePasted || '').trim();
-  if (!text) { showToast('Please paste the ingredient list first'); return; }
-  UI.recipePasted = text;
+  const raw = (document.getElementById('rPaste')?.value || UI.recipePasted || '').trim();
+  if (!raw) { showToast('Please paste the ingredient list first'); return; }
+  UI.recipePasted = raw;
+
+  // FIX 1: resolve fractions before splitting
+  const text = resolveFractions(raw);
   const lines = text.split('\n').map(l=>l.trim()).filter(l=>l.length>2);
   const ingredients = [];
-  const qtyRe = /^[-•*\d.)\s]*(\d+\.?\d*)\s*(g|kg|ml|l|tbsp?|tsp?|cups?|pcs?|cloves?|heads?|stalks?|bunches?|bottles?|cans?|packs?|pieces?|slices?|lbs?|oz)?\s+(.+)/i;
-  const simpleRe = /^[-•*\d.)\s]*(?:\d+\s+)?(.+)/i;
+  const qtyRe = /^[-•*)\s]*(\d+\.?\d*)\s*(g|kg|ml|l|tbsp?|tsp?|cups?|pcs?|cloves?|heads?|stalks?|bunches?|bottles?|cans?|packs?|pieces?|slices?|lbs?|oz)?\s+(.+)/i;
+  const simpleRe = /^[-•*)\s]*(?:\d+\.?\d*\s+)?(.+)/i;
   lines.forEach(line => {
     const m = line.match(qtyRe);
     if (m) {
-      ingredients.push({ qty: parseFloat(m[1]), unit: m[2]||'', name: m[3].replace(/[,;.]+$/, '').trim() });
+      ingredients.push({ qty: parseFloat(m[1]), unit: (m[2]||'').toLowerCase(), name: m[3].replace(/[,;.]+$/, '').trim() });
     } else {
       const m2 = line.match(simpleRe);
-      if (m2) ingredients.push({ qty: 1, unit: '', name: m2[1].replace(/[,;.]+$/, '').trim() });
+      if (m2) {
+        const name = m2[1].replace(/[,;.]+$/, '').trim();
+        if (name) ingredients.push({ qty: 1, unit: '', name });
+      }
     }
   });
 
   const have = [], low = [], need = [];
   ingredients.forEach(ing => {
-    const ingNameL = ing.name.toLowerCase().replace(/[()]/g,'');
+    const ingNameL = ing.name.toLowerCase().replace(/[()]/g,'').trim();
     const match = D.pantry.find(p => {
       const pL = p.name.toLowerCase();
       return pL.includes(ingNameL) || ingNameL.includes(pL) ||
-        ingNameL.split(' ').some(w => w.length>3 && pL.includes(w));
+        ingNameL.split(' ').some(w => w.length > 3 && pL.includes(w));
     });
-    const qtyStr = ing.qty + (ing.unit?' '+ing.unit:'') + ' ' + ing.name;
+
+    // Format display qty — show original fractions if possible
+    const qtyStr = ing.qty + (ing.unit ? ' ' + ing.unit : '') + ' ' + ing.name;
+
     if (match) {
       const qty = totalQty(match);
-      if (isLow(match)) {
-        low.push({ name: ing.name, qtyStr, pantryQty: qty + ' ' + (match.brands[0]?.packUnit||'units'), pantryId: match.id });
+      const pantryQtyStr = totalPieces(match) + ' ' + (match.brands[0]?.packUnit || 'units');
+
+      // FIX 2: zero stock → always Need
+      if (qty === 0) {
+        need.push({ name: ing.name, qtyStr });
+        return;
+      }
+
+      // FIX 3: check if pantry actually has enough for this recipe
+      const hasEnough = pantryHasEnough(match, ing.qty, ing.unit);
+
+      if (!hasEnough) {
+        // Not enough for the recipe — treat as need
+        need.push({ name: ing.name, qtyStr, pantryQty: pantryQtyStr, pantryId: match.id });
+      } else if (isLow(match)) {
+        // Enough for recipe but generally running low — flag it
+        low.push({ name: ing.name, qtyStr, pantryQty: pantryQtyStr, pantryId: match.id });
       } else {
-        have.push({ name: ing.name, qtyStr, pantryQty: qty + ' ' + (match.brands[0]?.packUnit||'units'), pantryId: match.id });
+        have.push({ name: ing.name, qtyStr, pantryQty: pantryQtyStr, pantryId: match.id });
       }
     } else {
       need.push({ name: ing.name, qtyStr });
     }
   });
 
-  UI.recipeResults = { dish: UI.recipeInput.dish, have, low, need };
+  UI.recipeResults = { dish: UI.recipeInput.dish, have, low, need, added: new Set() };
   renderApp();
 }
 
@@ -858,6 +1014,10 @@ function addRecipeItemToShopping(itemName, recipeName) {
   const already = D.shopping.find(s => s.itemName.toLowerCase()===itemName.toLowerCase() && s.category===recipeName);
   if (already) { showToast('Already on list'); return; }
   D.shopping.push({ id: uid(), itemName, brandPreference:'', category: recipeName, quantityNeeded:1, unit:'', source:'recipe', checked:false });
+  if (UI.recipeResults) {
+    if (!UI.recipeResults.added) UI.recipeResults.added = new Set();
+    UI.recipeResults.added.add(itemName.toLowerCase());
+  }
   markChange();
   showToast(`✅ Added to "${recipeName}"`);
   renderApp();
@@ -866,10 +1026,15 @@ function addRecipeItemToShopping(itemName, recipeName) {
 function addAllMissingToShopping() {
   if (!UI.recipeResults) return;
   const dish = UI.recipeResults.dish;
+  if (!UI.recipeResults.added) UI.recipeResults.added = new Set();
   let count = 0;
   [...UI.recipeResults.need, ...UI.recipeResults.low].forEach(r => {
     const already = D.shopping.find(s => s.itemName.toLowerCase()===r.name.toLowerCase() && s.category===dish);
-    if (!already) { D.shopping.push({ id:uid(), itemName:r.name, brandPreference:'', category:dish, quantityNeeded:1, unit:'', source:'recipe', checked:false }); count++; }
+    if (!already) {
+      D.shopping.push({ id:uid(), itemName:r.name, brandPreference:'', category:dish, quantityNeeded:1, unit:'', source:'recipe', checked:false });
+      UI.recipeResults.added.add(r.name.toLowerCase());
+      count++;
+    }
   });
   markChange();
   showToast(`✅ Added ${count} item${count!==1?'s':''} to shopping list`);
@@ -992,14 +1157,24 @@ function renderSettings() {
 function openAddItemModal(prefill) {
   const cats = D.categories.map(c => `<option value="${c.id}" ${prefill?.categoryId===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('');
   const p = prefill || {};
+  const byPieces = p.minStockUnit === 'pieces';
   openModal(`
     <div class="mhdr"><div class="mtitle">Add Pantry Item</div><button class="btn-icon" onclick="closeModal()">✕</button></div>
-    <div class="fg"><label class="fl">Item Name *</label><input class="fi" id="miName" placeholder="e.g. Vinegar" value="${escHtml(p.name||'')}"></div>
+    <div class="fg"><label class="fl">Item Name *</label><input class="fi" id="miName" placeholder="e.g. Tissue Rolls" value="${escHtml(p.name||'')}"></div>
     <div class="fg"><label class="fl">Category</label><select class="fs" id="miCat">${cats}</select></div>
-    <div class="fr2">
-      <div class="fg"><label class="fl">Min Stock</label><input class="fi" id="miMin" type="number" min="0" placeholder="1" value="${p.minStock||1}"></div>
-      <div class="fg"><label class="fl">Expiry Warn (days)</label><input class="fi" id="miWarn" type="number" min="1" placeholder="7" value="${p.expiryWarnDays||7}"></div>
+    <div class="fg">
+      <label class="fl">Min Stock Threshold</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input class="fi" id="miMin" type="number" min="0" placeholder="e.g. 6" value="${p.minStock||1}" style="flex:1">
+        <select class="fs" id="miMinUnit" style="flex:1">
+          <option value="packs" ${!byPieces?'selected':''}>Packs</option>
+          <option value="pieces" ${byPieces?'selected':''}>Pieces</option>
+        </select>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Pieces = pack qty × pack size across all brands</div>
     </div>
+    <div class="fg"><label class="fl">Expiry Warn (days)</label><input class="fi" id="miWarn" type="number" min="1" placeholder="7" value="${p.expiryWarnDays||7}"></div>
+    <div class="fg"><label class="fl">Low Remaining Alert (%)</label><input class="fi" id="miLow" type="number" min="1" max="99" placeholder="25" value="${p.lowRemainPercent != null ? p.lowRemainPercent : 25}"><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Auto-adds to shopping list when a brand drops below this % of a pack</div></div>
     <button class="btn btn-primary btn-w" onclick="submitAddItem()">Add Item</button>
   `);
 }
@@ -1011,7 +1186,9 @@ function submitAddItem() {
     id: uid(), name,
     categoryId: document.getElementById('miCat').value,
     minStock: parseInt(document.getElementById('miMin').value)||1,
+    minStockUnit: document.getElementById('miMinUnit').value || 'packs',
     expiryWarnDays: parseInt(document.getElementById('miWarn').value)||7,
+    lowRemainPercent: parseInt(document.getElementById('miLow').value) || 25,
     brands: []
   };
   D.pantry.push(item);
@@ -1023,14 +1200,24 @@ function openEditItemModal(itemId) {
   const item = D.pantry.find(i=>i.id===itemId);
   if (!item) return;
   const cats = D.categories.map(c => `<option value="${c.id}" ${item.categoryId===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('');
+  const byPieces = item.minStockUnit === 'pieces';
   openModal(`
     <div class="mhdr"><div class="mtitle">Edit Item</div><button class="btn-icon" onclick="closeModal()">✕</button></div>
     <div class="fg"><label class="fl">Item Name *</label><input class="fi" id="eiName" value="${escHtml(item.name)}"></div>
     <div class="fg"><label class="fl">Category</label><select class="fs" id="eiCat">${cats}</select></div>
-    <div class="fr2">
-      <div class="fg"><label class="fl">Min Stock</label><input class="fi" id="eiMin" type="number" min="0" value="${item.minStock}"></div>
-      <div class="fg"><label class="fl">Expiry Warn (days)</label><input class="fi" id="eiWarn" type="number" min="1" value="${item.expiryWarnDays}"></div>
+    <div class="fg">
+      <label class="fl">Min Stock Threshold</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input class="fi" id="eiMin" type="number" min="0" value="${item.minStock}" style="flex:1">
+        <select class="fs" id="eiMinUnit" style="flex:1">
+          <option value="packs" ${!byPieces?'selected':''}>Packs</option>
+          <option value="pieces" ${byPieces?'selected':''}>Pieces</option>
+        </select>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Pieces = pack qty × pack size across all brands</div>
     </div>
+    <div class="fg"><label class="fl">Expiry Warn (days)</label><input class="fi" id="eiWarn" type="number" min="1" value="${item.expiryWarnDays}"></div>
+    <div class="fg"><label class="fl">Low Remaining Alert (%)</label><input class="fi" id="eiLow" type="number" min="1" max="99" value="${item.lowRemainPercent != null ? item.lowRemainPercent : 25}"><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Auto-adds to shopping list when a brand drops below this % of a pack</div></div>
     <button class="btn btn-primary btn-w" onclick="submitEditItem('${itemId}')">Save Changes</button>
   `);
 }
@@ -1043,7 +1230,9 @@ function submitEditItem(itemId) {
   item.name = name;
   item.categoryId = document.getElementById('eiCat').value;
   item.minStock = parseInt(document.getElementById('eiMin').value)||1;
+  item.minStockUnit = document.getElementById('eiMinUnit').value || 'packs';
   item.expiryWarnDays = parseInt(document.getElementById('eiWarn').value)||7;
+  item.lowRemainPercent = parseInt(document.getElementById('eiLow').value) || 25;
   markChange(); closeModal(); renderApp();
   showToast('✅ Item updated');
 }
@@ -1146,7 +1335,6 @@ function deleteBrand(itemId, brandId) {
 function openConsumeModal(itemId, suggestBrandId) {
   const item = D.pantry.find(i=>i.id===itemId);
   if (!item || !item.brands.length) { showToast('No stock to consume'); return; }
-  // Sort brands by expiry (oldest first)
   const sorted = [...item.brands].sort((a,b) => {
     if (!a.expiryDate) return 1;
     if (!b.expiryDate) return -1;
@@ -1155,15 +1343,54 @@ function openConsumeModal(itemId, suggestBrandId) {
   const brandOpts = sorted.map(b => {
     const exp = b.expiryDate ? ` (exp: ${formatDate(b.expiryDate)})` : '';
     const oldest = sorted[0].id === b.id ? ' ⬅ oldest' : '';
-    return `<option value="${b.id}" ${b.id===sorted[0].id?'selected':''}>${escHtml(b.brandName||'No brand')} — ${b.quantity} ${b.packUnit}${exp}${oldest}</option>`;
+    const display = formatPackQty(b.quantity, b.packSize, b.packUnit);
+    return `<option value="${b.id}" ${b.id===sorted[0].id?'selected':''}>${escHtml(b.brandName||'No brand')} — ${display}${exp}${oldest}</option>`;
   }).join('');
+  const firstBrand = sorted[0];
   openModal(`
     <div class="mhdr"><div class="mtitle">Consume — ${escHtml(item.name)}</div><button class="btn-icon" onclick="closeModal()">✕</button></div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">App suggests the oldest stock first.</div>
-    <div class="fg"><label class="fl">Brand / Stock</label><select class="fs" id="conBrand">${brandOpts}</select></div>
-    <div class="fg"><label class="fl">Quantity Used *</label><input class="fi" id="conQty" type="number" min="1" placeholder="1" value="1"></div>
+    <div class="fg"><label class="fl">Brand / Stock</label><select class="fs" id="conBrand" onchange="updateConsumeUnit('${itemId}')">${brandOpts}</select></div>
+    <div class="fg">
+      <label class="fl">Consume By</label>
+      <div style="display:flex;gap:8px;">
+        <select class="fs" id="conByUnit" style="flex:1" onchange="updateConsumeHint('${itemId}')">
+          <option value="packs">Packs</option>
+          <option value="pieces">Pieces (${firstBrand.packUnit||'pcs'})</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Quantity Used *</label>
+      <input class="fi" id="conQty" type="number" min="0.01" step="any" placeholder="1" value="1" oninput="updateConsumeHint('${itemId}')">
+      <div id="conHint" style="font-size:11px;color:var(--text-muted);margin-top:4px;"></div>
+    </div>
     <button class="btn btn-accent btn-w" onclick="submitConsume('${itemId}')">Log Consumption</button>
   `);
+}
+
+function updateConsumeUnit(itemId) {
+  updateConsumeHint(itemId);
+}
+
+function updateConsumeHint(itemId) {
+  const item = D.pantry.find(i=>i.id===itemId);
+  const brandId = document.getElementById('conBrand')?.value;
+  const brand = item?.brands.find(b=>b.id===brandId);
+  const byUnit = document.getElementById('conByUnit')?.value;
+  const qty = parseFloat(document.getElementById('conQty')?.value)||0;
+  const hint = document.getElementById('conHint');
+  if (!brand || !hint) return;
+  if (byUnit === 'pieces') {
+    const totalPcs = Math.round(brand.quantity * brand.packSize);
+    const remaining = Math.round(totalPcs - qty);
+    hint.textContent = `You have ${totalPcs} ${brand.packUnit||'pcs'} available. After: ${Math.max(0,remaining)} ${brand.packUnit||'pcs'} left.`;
+    hint.style.color = remaining < 0 ? 'var(--danger)' : 'var(--text-muted)';
+  } else {
+    const remaining = brand.quantity - qty;
+    hint.textContent = `You have ${formatPackQty(brand.quantity, brand.packSize, brand.packUnit)} available. After: ${remaining >= 0 ? formatPackQty(remaining, brand.packSize, brand.packUnit) : 'over limit'}.`;
+    hint.style.color = remaining < 0 ? 'var(--danger)' : 'var(--text-muted)';
+  }
 }
 
 function submitConsume(itemId) {
@@ -1171,17 +1398,61 @@ function submitConsume(itemId) {
   const brandId = document.getElementById('conBrand').value;
   const brand = item?.brands.find(b=>b.id===brandId);
   if (!brand) return;
-  const qty = parseInt(document.getElementById('conQty').value)||1;
-  if (qty > brand.quantity) { showToast(`Only ${brand.quantity} in stock`); return; }
-  brand.quantity -= qty;
+  const byUnit = document.getElementById('conByUnit').value;
+  const qty = parseFloat(document.getElementById('conQty').value)||0;
+  if (!qty || qty <= 0) { showToast('Enter a valid quantity'); return; }
+
+  let packsToDeduct, historyQty, historyUnit;
+
+  if (byUnit === 'pieces') {
+    const totalPcs = brand.quantity * brand.packSize;
+    if (qty > totalPcs) { showToast(`Only ${Math.round(totalPcs)} ${brand.packUnit||'pcs'} available`); return; }
+    packsToDeduct = qty / brand.packSize;
+    historyQty = qty;
+    historyUnit = brand.packUnit || 'pcs';
+  } else {
+    if (qty > brand.quantity) { showToast(`Only ${formatPackQty(brand.quantity, brand.packSize, brand.packUnit)} available`); return; }
+    packsToDeduct = qty;
+    historyQty = qty;
+    historyUnit = 'packs';
+  }
+
+  brand.quantity -= packsToDeduct;
+  // Round to avoid floating point noise
+  brand.quantity = Math.round(brand.quantity * 10000) / 10000;
+
   D.history.push({
     id: uid(), type: 'consumption', date: Date.now(),
-    itemName: item.name, brandName: brand.brandName, quantity: qty,
-    unit: brand.packUnit, category: catName(item.categoryId)
+    itemName: item.name, brandName: brand.brandName,
+    quantity: historyQty, unit: historyUnit,
+    category: catName(item.categoryId)
   });
-  if (brand.quantity === 0) item.brands = item.brands.filter(b=>b.id!==brandId);
-  markChange(); closeModal(); renderApp();
-  showToast(`✅ Logged ${qty} ${brand.packUnit} consumed`);
+
+  // Remove brand if fully depleted
+  if (brand.quantity <= 0) {
+    item.brands = item.brands.filter(b=>b.id!==brandId);
+    markChange(); closeModal(); renderApp();
+    showToast(`✅ Logged — stock depleted`);
+    checkAutoSuggestions();
+    return;
+  }
+
+  const threshold = (item.lowRemainPercent != null ? item.lowRemainPercent : 25) / 100;
+  const hitThreshold = brand.quantity <= threshold;
+  if (hitThreshold) {
+    const alreadyOnList = D.shopping.find(s => s.pantryItemId===item.id && s.source==='low-stock');
+    if (!alreadyOnList) {
+      D.shopping.push({
+        id: uid(), itemName: item.name, brandPreference: brand.brandName,
+        category: catName(item.categoryId), quantityNeeded: 1, unit: '',
+        source: 'low-stock', pantryItemId: item.id, checked: false
+      });
+    }
+  }
+
+  markChange(); closeModal();
+  showToast(hitThreshold ? `⚠️ Running low — added to shopping list` : `✅ Logged ${historyQty} ${historyUnit} consumed`);
+  renderApp();
   checkAutoSuggestions();
 }
 
@@ -1325,7 +1596,7 @@ function clearAllData() {
 // ============================================================
 // MISC
 // ============================================================
-function switchTab(t) { UI.tab = t; UI.pSearch=''; UI.hSearch=''; renderApp(); }
+function switchTab(t) { UI.tab = t; UI.pSearch=''; UI.hSearch=''; UI.pFilter='all'; renderApp(); }
 
 function escHtml(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
