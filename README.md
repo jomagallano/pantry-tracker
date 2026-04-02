@@ -1,4 +1,4 @@
-# 🥫 PantryTracker
+# 🥫 Bodega Tracker
 
 A personal pantry and shopping management tool built as a single HTML file. No login, no backend, no installation — just open the file in your browser and start tracking.
 
