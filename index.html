@@ -225,7 +225,22 @@ hr.div{border:none;border-top:1px solid var(--border);margin:12px 0;}
 .app-sig{background:var(--primary);padding:10px 18px;display:flex;align-items:center;justify-content:space-between;position:fixed;bottom:var(--nav-h);left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:97;display:none;}
 .app-sig-name{font-family:'Cormorant Garamond',serif;font-size:12px;font-style:italic;color:var(--accent);letter-spacing:.5px;}
 .app-sig-year{font-size:9px;color:rgba(255,255,255,0.3);letter-spacing:2px;font-family:'DM Sans',sans-serif;}
-/* MEAL SUGGESTIONS */
+/* REORDER / COLLAPSE */
+.sec-hdr-actions{display:flex;align-items:center;gap:2px;}
+.reorder-btn{background:none;border:none;color:var(--text-light);cursor:pointer;padding:2px 4px;font-size:13px;line-height:1;border-radius:4px;font-family:'DM Sans',sans-serif;}
+.reorder-btn:active{background:var(--border);}
+.cat-toggle{background:none;border:none;cursor:pointer;padding:2px 4px;color:var(--text-muted);font-size:11px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:3px;border-radius:4px;}
+.cat-toggle:active{background:var(--border);}
+.cat-toggle svg{transition:transform .2s;width:14px;height:14px;stroke-width:2;}
+.cat-toggle.collapsed svg{transform:rotate(-90deg);}
+.item-reorder{display:flex;flex-direction:column;gap:1px;flex-shrink:0;}
+.item-reorder button{background:none;border:none;color:var(--text-light);cursor:pointer;padding:0 3px;font-size:10px;line-height:1.2;font-family:'DM Sans',sans-serif;}
+.item-reorder button:active{color:var(--primary);}
+/* MEAL MODE TOGGLE */
+.mode-toggle{display:flex;gap:0;border:1.5px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;margin-bottom:13px;}
+.mode-btn{flex:1;padding:8px 6px;font-size:12px;font-weight:600;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;background:#fff;color:var(--text-muted);transition:all .15s;text-align:center;}
+.mode-btn.active{background:var(--primary);color:#fff;}
+.mode-btn:first-child{border-right:1px solid var(--border);}
 .ms-card{background:#fff;border-radius:var(--radius-sm);border:1.5px solid var(--border);padding:13px;margin-bottom:10px;}
 .ms-card.ready{border-color:var(--primary);background:var(--primary-light);}
 .ms-card.almost{border-color:var(--warning);background:var(--warning-light);}
@@ -401,12 +416,13 @@ function importJSON(file) {
 let UI = {
   tab: 'pantry',
   expanded: new Set(),
+  collapsedCats: new Set(),
   checked: new Set(),
   hFilter: 'all',
   hSearch: '',
   pSearch: '',
   pSearchTimer: null,
-  mealSuggestInput: { servings: 2, time: 'normal', cuisine: 'any' },
+  mealSuggestInput: { servings: 2, time: 'normal', cuisine: 'any', mode: 'normal' },
   mealSuggestPasted: '',
   mealSuggestions: null,
   pFilter: 'all',
@@ -790,24 +806,40 @@ function renderPantry() {
 
   // "Low Stock" filter
   let anyItem = false;
-  D.categories.forEach(cat => {
+  D.categories.forEach((cat, catIdx) => {
     let items = groups[cat.id] || [];
     if (UI.pFilter === 'low') items = items.filter(i => isLow(i));
     if (q) items = items.filter(i => i.name.toLowerCase().includes(q));
     if (!items.length) return;
     anyItem = true;
+    const collapsed = UI.collapsedCats.has(cat.id);
+    const isFirst = catIdx === 0;
+    const isLast = catIdx === D.categories.length - 1;
     html += `<div class="sec-hdr">
-      <span class="sec-title">${cat.icon} ${cat.name}</span>
-      <span class="sec-badge">${items.length}</span>
-    </div>
-    <div class="card">`;
-    items.forEach(item => {
+      <button class="cat-toggle ${collapsed?'collapsed':''}" onclick="toggleCatCollapse('${cat.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"/></svg>
+        <span class="sec-title">${cat.icon} ${cat.name}</span>
+        <span class="sec-badge" style="margin-left:4px;">${items.length}</span>
+      </button>
+      <div class="sec-hdr-actions">
+        ${!isFirst?`<button class="reorder-btn" onclick="moveCategoryUp('${cat.id}')" title="Move up">↑</button>`:''}
+        ${!isLast?`<button class="reorder-btn" onclick="moveCategoryDown('${cat.id}')" title="Move down">↓</button>`:''}
+      </div>
+    </div>`;
+    if (collapsed) return;
+    html += `<div class="card">`;
+    items.forEach((item, itemIdx) => {
+      // Get actual index in D.pantry within this category
+      const catItems = D.pantry.filter(p => p.categoryId === cat.id);
+      const realIdx = catItems.findIndex(p => p.id === item.id);
+      const isFirstItem = realIdx === 0;
+      const isLastItem = realIdx === catItems.length - 1;
       const qty = totalQty(item);
       const low = isLow(item);
       const out = isOut(item);
       const expanded = UI.expanded.has(item.id);
       const qtyClass = out ? 'zero' : (low ? 'low' : '');
-      const stockDisplay = out ? '—' : displayItemTotal(item);
+      const stockDisplay = out ? '\u2014' : displayItemTotal(item);
       const minLabel = itemMinStockLabel(item);
       const minDisplay = 'min ' + item.minStock + ' ' + minLabel;
 
@@ -830,6 +862,10 @@ function renderPantry() {
           <div class="pi-right">
             <div class="pi-qty ${qtyClass}">${stockDisplay}</div>
             ${soonestExp ? `<div class="pi-exp ${soonestExp.status==='expired'?'red':'warn'}">${soonestExp.status==='expired'?'Expired':'Exp soon'}</div>` : ''}
+          </div>
+          <div class="item-reorder" onclick="event.stopPropagation()">
+            ${!isFirstItem?`<button onclick="moveItemUp('${item.id}','${cat.id}')">↑</button>`:'<span style="padding:0 3px;"> </span>'}
+            ${!isLastItem?`<button onclick="moveItemDown('${item.id}','${cat.id}')">↓</button>`:'<span style="padding:0 3px;"> </span>'}
           </div>
           <svg class="pi-chevron ${expanded?'open':''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:16px;height:16px;stroke-width:2;flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
@@ -882,6 +918,49 @@ function renderPantry() {
 function toggleExpand(id) {
   if (UI.expanded.has(id)) UI.expanded.delete(id); else UI.expanded.add(id);
   renderApp();
+}
+
+function toggleCatCollapse(id) {
+  if (UI.collapsedCats.has(id)) UI.collapsedCats.delete(id); else UI.collapsedCats.add(id);
+  renderApp();
+}
+
+function moveCategoryUp(id) {
+  const idx = D.categories.findIndex(c=>c.id===id);
+  if (idx <= 0) return;
+  const tmp = D.categories[idx-1];
+  D.categories[idx-1] = D.categories[idx];
+  D.categories[idx] = tmp;
+  markChange(); renderApp();
+}
+
+function moveCategoryDown(id) {
+  const idx = D.categories.findIndex(c=>c.id===id);
+  if (idx < 0 || idx >= D.categories.length-1) return;
+  const tmp = D.categories[idx+1];
+  D.categories[idx+1] = D.categories[idx];
+  D.categories[idx] = tmp;
+  markChange(); renderApp();
+}
+
+function moveItemUp(itemId, catId) {
+  const catItems = D.pantry.filter(p=>p.categoryId===catId);
+  const idx = catItems.findIndex(p=>p.id===itemId);
+  if (idx <= 0) return;
+  const idxA = D.pantry.findIndex(p=>p.id===catItems[idx].id);
+  const idxB = D.pantry.findIndex(p=>p.id===catItems[idx-1].id);
+  const tmp = D.pantry[idxA]; D.pantry[idxA] = D.pantry[idxB]; D.pantry[idxB] = tmp;
+  markChange(); renderApp();
+}
+
+function moveItemDown(itemId, catId) {
+  const catItems = D.pantry.filter(p=>p.categoryId===catId);
+  const idx = catItems.findIndex(p=>p.id===itemId);
+  if (idx < 0 || idx >= catItems.length-1) return;
+  const idxA = D.pantry.findIndex(p=>p.id===catItems[idx].id);
+  const idxB = D.pantry.findIndex(p=>p.id===catItems[idx+1].id);
+  const tmp = D.pantry[idxA]; D.pantry[idxA] = D.pantry[idxB]; D.pantry[idxB] = tmp;
+  markChange(); renderApp();
 }
 
 // ============================================================
@@ -1035,9 +1114,19 @@ function renderRecipe() {
 
   // MEAL SUGGESTIONS SECTION
   const ms = UI.mealSuggestInput;
+  const msMode = ms.mode || 'normal';
+  // Count expiring items for badge
+  const expiringCount = D.pantry.filter(item =>
+    item.brands.some(b => { const es = expiryStatus(b, item.expiryWarnDays); return es === 'expiring' || es === 'expired'; })
+  ).length;
   html += `<div class="sec-hdr"><span class="sec-title">🍽 What Should I Cook?</span></div>`;
   html += `<div class="card" style="padding:14px">
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">App will scan your pantry and ask Claude to suggest 3 meals you can make.</div>
+    <div class="mode-toggle">
+      <button class="mode-btn ${msMode==='normal'?'active':''}" onclick="UI.mealSuggestInput.mode='normal';renderApp()">🧺 From My Pantry</button>
+      <button class="mode-btn ${msMode==='expiring'?'active':''}" onclick="UI.mealSuggestInput.mode='expiring';renderApp()">⏰ Use Before It's Gone${expiringCount?' ('+expiringCount+')':''}</button>
+    </div>
+    ${msMode==='expiring'?`<div style="font-size:11px;color:var(--warning);background:var(--warning-light);padding:7px 10px;border-radius:6px;margin-bottom:12px;">Suggests meals using your ${expiringCount} expiring/expired item${expiringCount!==1?'s':''} first.</div>`:''}
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">${msMode==='expiring'?'Claude will prioritise expiring ingredients and suggest meals around them.':'App will scan your pantry and ask Claude to suggest 3 meals you can make.'}</div>
     <div class="fr2">
       <div class="fg">
         <label class="fl">Servings</label>
@@ -1324,12 +1413,13 @@ function copyMealSuggestPrompt() {
   const servings = parseInt(document.getElementById('msServings').value) || 2;
   const time = document.getElementById('msTime').value;
   const cuisine = document.getElementById('msCuisine').value;
-  UI.mealSuggestInput = { servings, time, cuisine };
+  const mode = UI.mealSuggestInput.mode || 'normal';
+  UI.mealSuggestInput = { servings, time, cuisine, mode };
 
   const timeLabel = { quick: '30 minutes or less', normal: 'about 1 hour', full: '2 hours or more' }[time] || '1 hour';
   const cuisineLabel = cuisine === 'any' ? 'any cuisine' : cuisine + ' cuisine';
 
-  // Build pantry list — only in-stock items
+  // Build pantry list
   const pantryLines = [];
   D.pantry.forEach(function(item) {
     if (totalQty(item) <= 0) return;
@@ -1338,12 +1428,35 @@ function copyMealSuggestPrompt() {
   });
   const pantryText = pantryLines.length ? pantryLines.join('\n') : '(pantry is empty)';
 
-  const prompt = 'I have the following ingredients in my pantry:\n' + pantryText + '\n\n' +
-    'Please suggest exactly 3 meals I can cook for ' + servings + ' person' + (servings !== 1 ? 's' : '') + '. ' +
-    'Cook time should be ' + timeLabel + '. Cuisine: ' + cuisineLabel + '.\n\n' +
-    'For each meal, determine if it can be made entirely from my pantry (readyToCook: true) or needs a few extra ingredients (readyToCook: false).\n\n' +
-    'Respond ONLY with a valid JSON array. No explanation, no markdown fences. Format:\n' +
-    '[{"name":"Meal Name","description":"One sentence description","cookTime":"X minutes","readyToCook":true,"missingIngredients":[]},...]';
+  var prompt;
+  if (mode === 'expiring') {
+    // Build expiring items list
+    const expiringLines = [];
+    D.pantry.forEach(function(item) {
+      item.brands.forEach(function(b) {
+        const es = expiryStatus(b, item.expiryWarnDays);
+        if (es === 'expiring' || es === 'expired') {
+          const label = es === 'expired' ? ' (EXPIRED)' : ' (expiring soon)';
+          expiringLines.push('- ' + item.name + (b.brandName ? ' (' + b.brandName + ')' : '') + label);
+        }
+      });
+    });
+    const expiringText = expiringLines.length ? expiringLines.join('\n') : '(none)';
+    prompt = 'I need to use up ingredients that are expiring soon. Here are the items I must prioritise:\n' + expiringText +
+      '\n\nMy full pantry also includes:\n' + pantryText +
+      '\n\nPlease suggest exactly 3 meals for ' + servings + ' person' + (servings !== 1 ? 's' : '') +
+      ' that USE the expiring ingredients above. Cook time: ' + timeLabel + '. Cuisine: ' + cuisineLabel + '.\n\n' +
+      'For each meal, determine if it can be made entirely from my pantry (readyToCook: true) or needs extra ingredients (readyToCook: false).\n\n' +
+      'Respond ONLY with a valid JSON array. No explanation, no markdown fences. Format:\n' +
+      '[{"name":"Meal Name","description":"One sentence description","cookTime":"X minutes","readyToCook":true,"missingIngredients":[]},...]';
+  } else {
+    prompt = 'I have the following ingredients in my pantry:\n' + pantryText + '\n\n' +
+      'Please suggest exactly 3 meals I can cook for ' + servings + ' person' + (servings !== 1 ? 's' : '') + '. ' +
+      'Cook time should be ' + timeLabel + '. Cuisine: ' + cuisineLabel + '.\n\n' +
+      'For each meal, determine if it can be made entirely from my pantry (readyToCook: true) or needs a few extra ingredients (readyToCook: false).\n\n' +
+      'Respond ONLY with a valid JSON array. No explanation, no markdown fences. Format:\n' +
+      '[{"name":"Meal Name","description":"One sentence description","cookTime":"X minutes","readyToCook":true,"missingIngredients":[]},...]';
+  }
 
   navigator.clipboard.writeText(prompt).then(function() {
     showToast('Prompt copied! Paste in Claude.ai');
